@@ -259,7 +259,7 @@ index.html?url=https://your-api.com/v1&model=your-model&key=sk-your-key
 
 ### GitHub Pages 在线访问
 
-本项目已配置 GitHub Actions 自动部署，每次 push 到 main 分支会自动发布到 GitHub Pages。
+本项目已配置 GitHub Actions 自动部署，每次 push 到 main 分支会自动发布到 GitHub Pages。<https://100apps.github.io/llm_takeout_qoder/>
 
 ## 数据规模
 

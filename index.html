@@ -653,6 +653,7 @@ body {
           </div>
         </div>
         <div class="btn-group">
+          <button class="btn btn-primary" onclick="userQuickOrder('点杯咖啡')">点杯咖啡</button>
           <button class="btn btn-secondary" onclick="userAction('browse')">浏览商家</button>
           <button class="btn btn-secondary" onclick="userAction('orders')">我的订单</button>
           <button class="btn btn-warning" onclick="userAction('promotions')">平台活动</button>
@@ -1854,7 +1855,7 @@ async function llmChat(messages, tools = null, maxRetries = 3) {
   if (!config.model) missing.push('模型名称');
   if (!config.key) missing.push('API Key');
   if (missing.length > 0) {
-    throw new Error(`LLM 配置不完整，以下参数为必填项：${missing.join('、')}。请点击右上角"展开配置"填写，或通过URL参数传入（?url=...&model=...&key=...）`);
+    throw new Error(`LLM 配置不完整，以下参数为必填项：${missing.join('、')}。请点击左上角"展开配置"填写，或通过URL参数传入（?url=...&model=...&key=...）`);
   }
   let lastError = null;
   
@@ -3363,6 +3364,11 @@ async function userAction(action) {
     a2uiRenderers.user.hideLoading();
     a2uiRenderers.user.renderMessage(`操作失败: ${e.message}`, 'error');
   }
+}
+
+async function userQuickOrder(text) {
+  document.getElementById('user-input').value = text;
+  await userFreeInput();
 }
 
 async function userFreeInput() {
