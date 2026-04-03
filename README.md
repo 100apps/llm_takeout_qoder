@@ -1,6 +1,6 @@
 # AI-Native 外卖系统 (MCP + A2A + A2UI)
 
-> 一个**单 HTML 文件**实现的 AI 原生外卖平台原型，集成 MCP 工具协议、多 Agent 协作（A2A）和 Agent-to-UI 渲染管线，展示 LLM 如何深度驱动业务全链路。
+> 纯前端，纯本地，无任何服务端依赖，一个**单 HTML 文件**实现的 AI 原生外卖平台原型，集成 MCP 工具协议、多 Agent 协作（A2A）和 Agent-to-UI 渲染管线，展示 LLM 如何深度驱动业务全链路。
 
 ## 项目背景
 
