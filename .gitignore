@@ -1,0 +1,4 @@
+.qoder/
+*.py
+__pycache__/
+.env

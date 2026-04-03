@@ -1,0 +1,3924 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI-Native 外卖系统 (MCP + A2A + A2UI)</title>
+  <style>
+/* ════════════════════════════════════════════════════════════════
+   Section 1: Base & Theme
+   ════════════════════════════════════════════════════════════════ */
+:root {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --bg-card: #0f3460;
+  --text-primary: #eaeaea;
+  --text-secondary: #a0a0a0;
+  --accent-blue: #4e9af1;
+  --accent-green: #4caf50;
+  --accent-red: #f44336;
+  --accent-gold: #ffc107;
+  --accent-purple: #9c27b0;
+  --accent-cyan: #00bcd4;
+  --accent-orange: #ff9800;
+  --accent-pink: #e91e63;
+  --border-color: #2a3a5a;
+  --shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+.container { max-width: 1400px; margin: 0 auto; padding: 0 20px; }
+
+/* ════════════════════════════════════════════════════════════════
+   Section 2: Config Bar
+   ════════════════════════════════════════════════════════════════ */
+.config-bar {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  padding: 10px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.config-summary {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  cursor: pointer;
+}
+.config-summary .status { color: var(--accent-green); font-size: 14px; }
+.config-summary .toggle-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.config-panel {
+  display: none;
+  padding: 15px 0;
+  border-top: 1px solid var(--border-color);
+  margin-top: 10px;
+}
+.config-panel.show { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+.config-panel label { font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px; }
+.config-panel input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+.config-panel .btn-save {
+  grid-column: 1 / -1;
+  background: var(--accent-blue);
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Section 3: Tab Navigation
+   ════════════════════════════════════════════════════════════════ */
+.tab-nav {
+  display: flex;
+  gap: 5px;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--border-color);
+  overflow-x: auto;
+}
+.tab-btn {
+  padding: 10px 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px 8px 0 0;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.tab-btn:hover { background: var(--bg-card); color: var(--text-primary); }
+.tab-btn.active {
+  background: var(--bg-card);
+  color: var(--accent-blue);
+  border-bottom-color: var(--bg-card);
+}
+.tab-content { display: none; padding: 20px 0; min-height: 600px; }
+.tab-content.active { display: block; }
+
+/* ════════════════════════════════════════════════════════════════
+   Section 4: Panels & Cards
+   ════════════════════════════════════════════════════════════════ */
+.panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.panel-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: var(--accent-blue);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: opacity 0.2s;
+}
+.btn:hover { opacity: 0.85; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary { background: var(--accent-blue); color: white; }
+.btn-success { background: var(--accent-green); color: white; }
+.btn-danger { background: var(--accent-red); color: white; }
+.btn-warning { background: var(--accent-gold); color: black; }
+.btn-secondary { background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); }
+.btn-group { display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0; }
+
+/* ════════════════════════════════════════════════════════════════
+   Section 5: Log System
+   ════════════════════════════════════════════════════════════════ */
+.log-container {
+  background: #0a0a15;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px;
+  height: 400px;
+  overflow-y: auto;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.log-line { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.log-time { color: var(--text-secondary); margin-right: 8px; }
+.log-panel { color: var(--accent-blue); background: rgba(78,154,241,0.1); padding: 8px; border-radius: 4px; margin: 8px 0; border-left: 3px solid var(--accent-blue); }
+.log-info { color: var(--text-secondary); }
+.log-tool { color: var(--accent-gold); }
+.log-result { color: var(--accent-purple); }
+.log-error { color: var(--accent-red); }
+.log-success { color: var(--accent-green); }
+.log-agent { color: var(--accent-cyan); }
+.log-a2a { color: #666; font-style: italic; }
+
+/* ════════════════════════════════════════════════════════════════
+   Section 6: A2UI Components
+   ════════════════════════════════════════════════════════════════ */
+.a2ui-container { margin: 20px 0; }
+.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
+.product-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.product-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.product-emoji { font-size: 40px; text-align: center; margin-bottom: 10px; }
+.product-name { font-size: 16px; font-weight: 600; margin-bottom: 5px; }
+.product-merchant { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
+.product-tags { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+.product-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(255,193,7,0.2);
+  color: var(--accent-gold);
+}
+.product-tag.hot { background: rgba(244,67,54,0.2); color: var(--accent-red); }
+.product-tag.subsidy { background: rgba(76,175,80,0.2); color: var(--accent-green); }
+.price-section { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.price-original { text-decoration: line-through; color: var(--text-secondary); font-size: 14px; }
+.price-final { font-size: 22px; font-weight: 700; color: var(--accent-red); }
+.price-subsidy { font-size: 12px; color: var(--accent-green); }
+.product-card .btn { width: 100%; margin-top: 10px; }
+
+.order-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 10px;
+}
+.order-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
+.order-id { font-weight: 600; color: var(--accent-blue); }
+.order-status { padding: 3px 10px; border-radius: 12px; font-size: 12px; }
+.status-created { background: rgba(158,158,158,0.2); color: #9e9e9e; }
+.status-paid { background: rgba(33,150,243,0.2); color: #2196f3; }
+.status-accepted { background: rgba(156,39,176,0.2); color: #9c27b0; }
+.status-dispatched { background: rgba(255,152,0,0.2); color: #ff9800; }
+.status-delivering { background: rgba(0,188,212,0.2); color: #00bcd4; }
+.status-done { background: rgba(76,175,80,0.2); color: #4caf50; }
+.status-cancelled { background: rgba(244,67,54,0.2); color: #f44336; }
+.order-items { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+.order-price { font-weight: 600; color: var(--accent-gold); }
+
+.rider-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 10px;
+}
+.rider-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.rider-name { font-weight: 600; }
+.rider-rating { color: var(--accent-gold); }
+.rider-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 12px; }
+.rider-stat { text-align: center; }
+.rider-stat-value { font-size: 18px; font-weight: 600; color: var(--accent-blue); }
+.rider-stat-label { color: var(--text-secondary); }
+
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+.stat-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+}
+.stat-value { font-size: 28px; font-weight: 700; color: var(--accent-blue); }
+.stat-label { font-size: 12px; color: var(--text-secondary); margin-top: 5px; }
+
+/* ════════════════════════════════════════════════════════════════
+   Section 7: Forms
+   ════════════════════════════════════════════════════════════════ */
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 5px; }
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+.form-group textarea { min-height: 80px; resize: vertical; }
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+.input-with-btn { display: flex; gap: 10px; }
+.input-with-btn input { flex: 1; }
+
+/* ════════════════════════════════════════════════════════════════
+   Section 8: Data View
+   ════════════════════════════════════════════════════════════════ */
+.data-tabs { display: flex; gap: 5px; margin-bottom: 15px; flex-wrap: wrap; }
+.data-tab {
+  padding: 6px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.data-tab.active { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
+.data-table-container { overflow-x: auto; }
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.data-table th, .data-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+.data-table th { background: var(--bg-secondary); color: var(--text-secondary); font-weight: 500; }
+.data-table tr:hover { background: rgba(78,154,241,0.05); }
+.data-count { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
+
+/* ════════════════════════════════════════════════════════════════
+   Section 9: Test Results
+   ════════════════════════════════════════════════════════════════ */
+.test-results { margin-top: 20px; }
+.test-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border-color); }
+.test-icon { font-size: 20px; }
+.test-name { flex: 1; }
+.test-status { font-size: 12px; padding: 4px 12px; border-radius: 12px; }
+.test-pass { background: rgba(76,175,80,0.2); color: var(--accent-green); }
+.test-fail { background: rgba(244,67,54,0.2); color: var(--accent-red); }
+.test-pending { background: rgba(158,158,158,0.2); color: #9e9e9e; }
+
+/* ════════════════════════════════════════════════════════════════
+   Section 10: Searchable Select
+   ════════════════════════════════════════════════════════════════ */
+.searchable-select {
+  position: relative;
+  width: 100%;
+}
+.searchable-select input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+}
+.searchable-select input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+}
+.searchable-select .dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  z-index: 1000;
+}
+.searchable-select.open .dropdown { display: block; }
+.searchable-select .dropdown-item {
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border-color);
+}
+.searchable-select .dropdown-item:hover { background: var(--bg-card); }
+.searchable-select .dropdown-item.selected { background: var(--accent-blue); color: white; }
+.searchable-select .dropdown-item .item-id { color: var(--text-secondary); font-size: 11px; }
+.searchable-select .dropdown-count {
+  padding: 8px 12px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Section 11: A2UI Chat Flow Styles
+   ════════════════════════════════════════════════════════════════ */
+.a2ui-container {
+  max-height: 600px;
+  overflow-y: auto;
+  padding: 10px;
+}
+.a2ui-section {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px dashed var(--border-color);
+  animation: fadeIn 0.3s ease-in;
+}
+.a2ui-section:last-child {
+  border-bottom: none;
+}
+.a2ui-timestamp {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.a2ui-timestamp::before {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+.a2ui-timestamp::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+.a2ui-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  gap: 10px;
+}
+.a2ui-loading .spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent-blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.order-rider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: rgba(78,154,241,0.1);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--accent-cyan);
+}
+.order-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.order-actions .btn {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Section 12: Promotion Cards
+   ════════════════════════════════════════════════════════════════ */
+.promotion-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-left: 4px solid var(--accent-gold);
+}
+.promotion-card.status-paused { border-left-color: var(--text-secondary); }
+.promotion-card.status-ended { border-left-color: var(--accent-red); opacity: 0.7; }
+.promotion-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.promotion-title { font-size: 16px; font-weight: 600; color: var(--accent-gold); }
+.promotion-badge {
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: rgba(255,193,7,0.2);
+  color: var(--accent-gold);
+}
+.promotion-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.5; }
+.promotion-rules { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
+.promotion-rules span { display: inline-block; margin-right: 15px; }
+.promotion-reward {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent-red);
+  margin-bottom: 10px;
+}
+.promotion-actions { display: flex; gap: 8px; margin-top: 10px; }
+.promotion-actions .btn { padding: 6px 12px; font-size: 12px; }
+
+/* ════════════════════════════════════════════════════════════════
+   Section 13: Tool List
+   ════════════════════════════════════════════════════════════════ */
+.tool-categories { display: flex; flex-direction: column; gap: 20px; }
+.tool-category { border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
+.tool-category-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 15px; font-size: 14px; font-weight: 600;
+  cursor: pointer; user-select: none;
+}
+.tool-category-header .tool-count {
+  font-size: 11px; font-weight: 400; color: var(--text-secondary);
+  background: var(--bg-primary); padding: 2px 8px; border-radius: 10px;
+}
+.tool-category-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px; padding: 10px 15px 15px;
+}
+.tool-card {
+  background: var(--bg-primary); border: 1px solid var(--border-color);
+  border-radius: 8px; padding: 12px; cursor: pointer;
+  transition: all 0.2s; border-left: 3px solid transparent;
+}
+.tool-card:hover {
+  border-left-color: var(--accent-blue); background: var(--bg-card);
+  transform: translateX(2px);
+}
+.tool-card.active { border-left-color: var(--accent-green); background: var(--bg-card); }
+.tool-card .tool-name { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+.tool-card .tool-desc { font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; line-height: 1.4; }
+.tool-card .tool-params {
+  display: flex; flex-wrap: wrap; gap: 4px;
+}
+.tool-card .tool-param-tag {
+  font-size: 10px; padding: 1px 6px; border-radius: 3px;
+  background: rgba(78,154,241,0.15); color: var(--accent-blue);
+}
+.tool-card .tool-param-tag.required {
+  background: rgba(255,152,0,0.15); color: var(--accent-orange);
+}
+.tool-result-output {
+  background: var(--bg-primary); border: 1px solid var(--border-color);
+  border-radius: 8px; padding: 15px; min-height: 200px; max-height: 500px;
+  overflow: auto; font-size: 12px; line-height: 1.5;
+  color: var(--text-primary); white-space: pre-wrap; word-break: break-all;
+}
+.tool-result-header { color: var(--accent-gold); font-weight: 600; margin-bottom: 8px; display: block; }
+.tool-result-args { color: var(--accent-cyan); margin-bottom: 8px; display: block; }
+.tool-result-ok { color: var(--accent-green); }
+.tool-result-err { color: var(--accent-red); }
+
+/* Role accent colors for tool categories */
+.tool-category[data-role="user"] .tool-category-header { background: rgba(78,154,241,0.1); color: var(--accent-blue); }
+.tool-category[data-role="user"] .tool-card:hover { border-left-color: var(--accent-blue); }
+.tool-category[data-role="merchant"] .tool-category-header { background: rgba(76,175,80,0.1); color: var(--accent-green); }
+.tool-category[data-role="merchant"] .tool-card:hover { border-left-color: var(--accent-green); }
+.tool-category[data-role="platform"] .tool-category-header { background: rgba(156,39,176,0.1); color: var(--accent-purple); }
+.tool-category[data-role="platform"] .tool-card:hover { border-left-color: var(--accent-purple); }
+.tool-category[data-role="rider"] .tool-category-header { background: rgba(0,188,212,0.1); color: var(--accent-cyan); }
+.tool-category[data-role="rider"] .tool-card:hover { border-left-color: var(--accent-cyan); }
+.tool-category[data-role="operator"] .tool-category-header { background: rgba(255,193,7,0.1); color: var(--accent-gold); }
+.tool-category[data-role="operator"] .tool-card:hover { border-left-color: var(--accent-gold); }
+
+/* ════════════════════════════════════════════════════════════════
+   Section 14: Responsive
+   ════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .config-panel.show { grid-template-columns: 1fr; }
+  .tab-btn { padding: 8px 12px; font-size: 12px; }
+  .product-grid { grid-template-columns: 1fr; }
+}
+  </style>
+</head>
+<body>
+  <!-- Config Bar -->
+  <div class="config-bar">
+    <div class="config-summary" onclick="toggleConfig()">
+      <span class="status" id="config-status" style="color:#ff6b6b">LLM: 未配置（缺少Key）</span>
+      <button class="toggle-btn" id="config-toggle">展开配置</button>
+    </div>
+    <div class="config-panel" id="config-panel">
+      <div class="form-group">
+        <label>API URL</label>
+        <input type="text" id="cfg-url" placeholder="http://...">
+      </div>
+      <div class="form-group">
+        <label>Model</label>
+        <input type="text" id="cfg-model" placeholder="model name">
+      </div>
+      <div class="form-group">
+        <label>API Key</label>
+        <input type="password" id="cfg-key" placeholder="sk-...">
+      </div>
+      <button class="btn-save" onclick="saveConfig()">保存配置</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Tab Navigation -->
+    <div class="tab-nav">
+      <button class="tab-btn active" data-tab="user">用户视角</button>
+      <button class="tab-btn" data-tab="merchant">商户视角</button>
+      <button class="tab-btn" data-tab="rider">骑手视角</button>
+      <button class="tab-btn" data-tab="operator">平台运营</button>
+      <button class="tab-btn" data-tab="data">数据视图</button>
+      <button class="tab-btn" data-tab="tools">工具列表</button>
+      <button class="tab-btn" data-tab="test">完整测试</button>
+    </div>
+
+    <!-- Tab: Tools -->
+    <div class="tab-content" id="tab-tools">
+      <div class="panel">
+        <div class="panel-title">MCP 工具列表 (28个)</div>
+        <div class="tool-categories" id="tool-categories"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">工具调用结果</div>
+        <pre class="tool-result-output" id="tool-result-output">点击工具卡片发起测试调用</pre>
+      </div>
+    </div>
+
+    <!-- Tab: Test (Debug) -->
+    <div class="tab-content" id="tab-test">
+      <div class="panel">
+        <div class="panel-title">自动化测试</div>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="runAllScenarios()">运行全部场景</button>
+          <button class="btn btn-secondary" onclick="runScenario('normal')">场景1: 正常流程</button>
+          <button class="btn btn-secondary" onclick="runScenario('reject')">场景2: 商户拒单</button>
+          <button class="btn btn-secondary" onclick="runScenario('subsidy')">场景3: 补贴流程</button>
+          <button class="btn btn-secondary" onclick="runScenario('dispatch')">场景4: 智能派单</button>
+          <button class="btn btn-warning" onclick="runScenario('promotion')">场景5: 活动推广</button>
+          <button class="btn btn-warning" onclick="runScenario('llm_subsidy')">场景6: LLM动态定价</button>
+          <button class="btn btn-warning" onclick="runScenario('auto_dispatch')">场景7: 接单自动派单</button>
+        </div>
+        <div class="test-results" id="test-results"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">A2UI 可视化验证</div>
+        <div class="a2ui-container" id="a2ui-test"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">执行日志</div>
+        <div class="log-container" id="log-test"></div>
+      </div>
+    </div>
+
+    <!-- Tab: User -->
+    <div class="tab-content active" id="tab-user">
+      <div class="panel">
+        <div class="panel-title">用户操作</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>选择用户（支持搜索，共100个）</label>
+            <div class="searchable-select" id="user-select-wrapper">
+              <input type="text" id="user-select-input" placeholder="搜索用户..." onclick="toggleDropdown('user')" oninput="filterSelect('user')">
+              <input type="hidden" id="user-select">
+              <div class="dropdown" id="user-select-dropdown"></div>
+            </div>
+          </div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-secondary" onclick="userAction('browse')">浏览商家</button>
+          <button class="btn btn-secondary" onclick="userAction('orders')">我的订单</button>
+          <button class="btn btn-warning" onclick="userAction('promotions')">平台活动</button>
+        </div>
+        <div class="form-group" style="margin-top:15px">
+          <label>自由输入（如"点杯咖啡"、"来份炸鸡"）</label>
+          <div class="input-with-btn">
+            <input type="text" id="user-input" placeholder="输入你想要的...">
+            <button class="btn btn-primary" onclick="userFreeInput()">发送</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">A2UI 交互区</div>
+        <div class="a2ui-container" id="a2ui-user"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">执行日志</div>
+        <div class="log-container" id="log-user"></div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Merchant -->
+    <div class="tab-content" id="tab-merchant">
+      <div class="panel">
+        <div class="panel-title">商户操作</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>选择商户（支持搜索，共100个）</label>
+            <div class="searchable-select" id="merchant-select-wrapper">
+              <input type="text" id="merchant-select-input" placeholder="搜索商户..." onclick="toggleDropdown('merchant')" oninput="filterSelect('merchant')">
+              <input type="hidden" id="merchant-select">
+              <div class="dropdown" id="merchant-select-dropdown"></div>
+            </div>
+          </div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-secondary" onclick="merchantAction('pending')">待处理订单</button>
+          <button class="btn btn-secondary" onclick="merchantAction('all_orders')">所有订单</button>
+          <button class="btn btn-success" onclick="merchantAction('accept')">接单</button>
+          <button class="btn btn-danger" onclick="merchantAction('reject')">拒单</button>
+        </div>
+        <div class="form-group" style="margin-top:15px">
+          <label>补贴设置</label>
+          <div class="form-row">
+            <div class="form-group">
+              <label>目标</label>
+              <select id="merchant-subsidy-goal">
+                <option value="increase_sales">提升销量</option>
+                <option value="clear_inventory">清理库存</option>
+                <option value="attract_new">吸引新客</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>最高补贴率</label>
+              <input type="number" id="merchant-subsidy-rate" value="0.3" step="0.05" min="0" max="1">
+            </div>
+            <div class="form-group">
+              <label>每日预算</label>
+              <input type="number" id="merchant-subsidy-budget" value="500" min="0">
+            </div>
+          </div>
+          <button class="btn btn-warning" onclick="merchantSetSubsidy()">保存补贴设置</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">A2UI 交互区</div>
+        <div class="a2ui-container" id="a2ui-merchant"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">执行日志</div>
+        <div class="log-container" id="log-merchant"></div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Rider -->
+    <div class="tab-content" id="tab-rider">
+      <div class="panel">
+        <div class="panel-title">骑手操作</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>选择骑手（支持搜索，共100个）</label>
+            <div class="searchable-select" id="rider-select-wrapper">
+              <input type="text" id="rider-select-input" placeholder="搜索骑手..." onclick="toggleDropdown('rider')" oninput="filterSelect('rider')">
+              <input type="hidden" id="rider-select">
+              <div class="dropdown" id="rider-select-dropdown"></div>
+            </div>
+          </div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-secondary" onclick="riderAction('myorders')">我的订单</button>
+          <button class="btn btn-primary" onclick="riderAction('start')">开始配送</button>
+          <button class="btn btn-success" onclick="riderAction('complete')">完成配送</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">A2UI 交互区</div>
+        <div class="a2ui-container" id="a2ui-rider"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">执行日志</div>
+        <div class="log-container" id="log-rider"></div>
+      </div>
+    </div>
+
+    <!-- Tab 5: Operator -->
+    <div class="tab-content" id="tab-operator">
+      <div class="panel">
+        <div class="panel-title">平台运营</div>
+        <div class="btn-group">
+          <button class="btn btn-secondary" onclick="operatorAction('stats')">查看统计</button>
+          <button class="btn btn-secondary" onclick="operatorAction('config')">查看策略</button>
+          <button class="btn btn-warning" onclick="operatorAction('design_promotion')">活动设计</button>
+          <button class="btn btn-secondary" onclick="operatorAction('list_promotions')">活动列表</button>
+        </div>
+        <div class="form-group" style="margin-top:15px">
+          <label>自由输入（如"设计一个拉新活动"、"查看活动效果"）</label>
+          <div class="input-with-btn">
+            <input type="text" id="operator-input" placeholder="输入运营指令...">
+            <button class="btn btn-primary" onclick="operatorFreeInput()">发送</button>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:15px">
+          <label>平台补贴设置</label>
+          <div class="form-row">
+            <div class="form-group">
+              <label>目标</label>
+              <select id="platform-subsidy-goal">
+                <option value="gmv_growth">GMV增长</option>
+                <option value="user_retention">用户留存</option>
+                <option value="new_user">拉新</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>每单最高补贴</label>
+              <input type="number" id="platform-subsidy-limit" value="10" min="0">
+            </div>
+          </div>
+          <button class="btn btn-warning" onclick="operatorSetSubsidy()">保存平台补贴</button>
+        </div>
+        <div class="form-group" style="margin-top:15px">
+          <label>派单策略</label>
+          <div class="form-row">
+            <div class="form-group">
+              <label>优化目标</label>
+              <select id="dispatch-goal">
+                <option value="balanced">均衡</option>
+                <option value="cost_first">成本优先</option>
+                <option value="time_first">时效优先</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="operatorSetDispatch()">保存派单策略</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">A2UI 交互区</div>
+        <div class="a2ui-container" id="a2ui-operator"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">统计数据</div>
+        <div class="stats-grid" id="stats-grid"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">执行日志</div>
+        <div class="log-container" id="log-operator"></div>
+      </div>
+    </div>
+
+    <!-- Tab 6: Data -->
+    <div class="tab-content" id="tab-data">
+      <div class="panel">
+        <div class="panel-title">数据管理</div>
+        <div class="btn-group">
+          <button class="btn btn-secondary" onclick="refreshData()">刷新数据</button>
+          <button class="btn btn-danger" onclick="resetData()">重置全部数据</button>
+          <button class="btn btn-warning" onclick="exportData()">导出JSON</button>
+        </div>
+        <div class="data-tabs" id="data-tabs"></div>
+        <div class="data-count" id="data-count"></div>
+        <div class="data-table-container">
+          <table class="data-table" id="data-table">
+            <thead id="data-thead"></thead>
+            <tbody id="data-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+   Section 1: Configuration & Constants
+   ════════════════════════════════════════════════════════════════ */
+const DEFAULT_CONFIG = {
+  url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+  model: 'qwen3-max',
+  key: ''
+};
+
+const VALID_TRANSITIONS = {
+  CREATED: ['PAID', 'CANCELLED'],
+  PAID: ['ACCEPTED', 'CANCELLED'],
+  ACCEPTED: ['DISPATCHED', 'CANCELLED'],
+  DISPATCHED: ['DELIVERING'],
+  DELIVERING: ['DONE'],
+  DONE: [],
+  CANCELLED: []
+};
+
+const CATEGORIES = [
+  { id: 'coffee', name: '咖啡', emoji: '☕', basePrice: 25, products: ['美式', '拿铁', '卡布奇诺', '摩卡', '冰美式', '燕麦拿铁', '香草拿铁', '焦糖玛奇朵', '冷萃', '浓缩'] },
+  { id: 'milktea', name: '奶茶', emoji: '🧋', basePrice: 18, products: ['珍珠奶茶', '芋泥波波', '杨枝甘露', '芝士奶盖', '红豆奶茶', '抹茶拿铁', '椰椰芒芒', '多肉葡萄', '草莓奶昔', '蜜桃乌龙'] },
+  { id: 'chinese', name: '中式快餐', emoji: '🍚', basePrice: 28, products: ['宫保鸡丁', '红烧肉', '鱼香肉丝', '糖醋里脊', '麻婆豆腐', '回锅肉', '青椒肉丝', '番茄炒蛋', '蒜蓉西兰花', '米饭'] },
+  { id: 'western', name: '西式快餐', emoji: '🍔', basePrice: 32, products: ['牛肉汉堡', '鸡腿堡', '炸鸡翅', '薯条', '可乐', '鸡块', '热狗', '披萨', '意面', '沙拉'] },
+  { id: 'hotpot', name: '火锅', emoji: '🍲', basePrice: 68, products: ['鸳鸯锅底', '牛肉卷', '羊肉卷', '毛肚', '虾滑', '豆腐', '土豆片', '金针菇', '娃娃菜', '宽粉'] },
+  { id: 'japanese', name: '日韩料理', emoji: '🍣', basePrice: 45, products: ['三文鱼刺身', '寿司拼盘', '天妇罗', '拉面', '石锅拌饭', '韩式炸鸡', '部队锅', '味噌汤', '鳗鱼饭', '章鱼小丸子'] },
+  { id: 'bakery', name: '烘焙甜点', emoji: '🍰', basePrice: 22, products: ['提拉米苏', '芝士蛋糕', '巧克力慕斯', '泡芙', '马卡龙', '可颂', '吐司', '蛋挞', '曲奇', '舒芙蕾'] },
+  { id: 'grocery', name: '生鲜超市', emoji: '🥬', basePrice: 35, products: ['鸡蛋', '牛奶', '苹果', '香蕉', '西红柿', '土豆', '鸡胸肉', '三文鱼', '虾仁', '五花肉'] },
+  { id: 'convenience', name: '便利店', emoji: '🏪', basePrice: 12, products: ['矿泉水', '可乐', '关东煮', '饭团', '三明治', '方便面', '零食', '口香糖', '面包', '酸奶'] },
+  { id: 'pharmacy', name: '药店', emoji: '💊', basePrice: 25, products: ['感冒灵', '布洛芬', '创可贴', '体温计', '口罩', '维C泡腾', '板蓝根', '止咳糖浆', '眼药水', '风油精'] },
+  { id: 'flowers', name: '鲜花', emoji: '💐', basePrice: 88, products: ['玫瑰花束', '向日葵', '康乃馨', '百合', '满天星', '郁金香', '绣球花', '芍药', '永生花', '多肉植物'] },
+  { id: 'pets', name: '宠物', emoji: '🐾', basePrice: 45, products: ['狗粮', '猫粮', '猫砂', '狗零食', '猫罐头', '宠物玩具', '牵引绳', '猫抓板', '宠物窝', '洗护用品'] }
+];
+
+const ADDRESSES = [
+  '朝阳区建国路88号', '海淀区中关村大街1号', '西城区金融街7号', '东城区王府井大街100号',
+  '丰台区西四环南路8号', '石景山区古城路6号', '通州区新华大街15号', '顺义区机场东路22号',
+  '大兴区荣华中路10号', '昌平区回龙观东大街5号', '朝阳区望京SOHO', '海淀区五道口',
+  '朝阳区三里屯', '东城区簋街', '西城区西单', '海淀区上地'
+];
+
+/* ════════════════════════════════════════════════════════════════
+   Section 2: Utility Functions
+   ════════════════════════════════════════════════════════════════ */
+function uuid() {
+  if (crypto.randomUUID) return crypto.randomUUID().slice(0, 8).toUpperCase();
+  return 'xxxxxxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16)).toUpperCase();
+}
+
+function now() { return new Date().toISOString(); }
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function randFloat(min, max) { return Math.round((Math.random() * (max - min) + min) * 100) / 100; }
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function padId(n, len = 3) { return String(n).padStart(len, '0'); }
+
+/* ════════════════════════════════════════════════════════════════
+   Section 3: LocalStore (localStorage CRUD)
+   ════════════════════════════════════════════════════════════════ */
+const STORE_PREFIX = 'takeout_';
+
+const LocalStore = {
+  _key(col) { return STORE_PREFIX + col; },
+  
+  _read(col) {
+    try {
+      const data = localStorage.getItem(this._key(col));
+      return data ? JSON.parse(data) : [];
+    } catch { return []; }
+  },
+  
+  _write(col, data) {
+    localStorage.setItem(this._key(col), JSON.stringify(data));
+  },
+  
+  get(col, id) {
+    return this._read(col).find(x => x.id === id) || null;
+  },
+  
+  put(col, item) {
+    const data = this._read(col);
+    const idx = data.findIndex(x => x.id === item.id);
+    if (idx >= 0) data[idx] = item;
+    else data.push(item);
+    this._write(col, data);
+  },
+  
+  query(col, filters = {}) {
+    let data = this._read(col);
+    for (const [k, v] of Object.entries(filters)) {
+      if (v !== undefined && v !== null && v !== '') {
+        data = data.filter(x => x[k] === v);
+      }
+    }
+    return data;
+  },
+  
+  all(col) { return this._read(col); },
+  
+  clear(col) { localStorage.removeItem(this._key(col)); },
+  
+  clearAll() {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith(STORE_PREFIX))
+      .forEach(k => localStorage.removeItem(k));
+  }
+};
+
+/* ════════════════════════════════════════════════════════════════
+   Section 4: Data Generator
+   ════════════════════════════════════════════════════════════════ */
+function generateMerchants() {
+  const merchants = [];
+  let idx = 1;
+  
+  for (const cat of CATEGORIES) {
+    const count = cat.id === 'coffee' || cat.id === 'chinese' || cat.id === 'western' ? 9 : 8;
+    for (let i = 1; i <= count && idx <= 100; i++, idx++) {
+      const menu = cat.products.map((name, pi) => ({
+        id: `prod_${padId(idx)}_${padId(pi + 1)}`,
+        name: name,
+        price: Math.round(cat.basePrice * randFloat(0.8, 1.5)),
+        category: pi < 5 ? 'main' : (pi < 8 ? 'side' : 'drink')
+      }));
+      
+      merchants.push({
+        id: `merchant_${padId(idx)}`,
+        name: `${cat.name}${String.fromCharCode(64 + i)}店`,
+        category: cat.id,
+        emoji: cat.emoji,
+        address: pick(ADDRESSES),
+        location: { lng: 116.3 + randFloat(0, 0.3), lat: 39.8 + randFloat(0, 0.2) },
+        menu: menu,
+        subsidy_config: {
+          enabled: Math.random() > 0.5,
+          goal: pick(['increase_sales', 'clear_inventory', 'attract_new']),
+          max_subsidy_rate: randFloat(0.1, 0.3),
+          daily_budget: rand(200, 1000),
+          target_products: [],
+          min_order_amount: rand(15, 30)
+        }
+      });
+    }
+  }
+  return merchants;
+}
+
+function generateUsers() {
+  const users = [];
+  for (let i = 1; i <= 100; i++) {
+    users.push({
+      id: `user_${padId(i)}`,
+      name: `用户${padId(i)}`,
+      address: pick(ADDRESSES),
+      location: { lng: 116.3 + randFloat(0, 0.3), lat: 39.8 + randFloat(0, 0.2) },
+      balance: rand(500, 2000),
+      order_count: rand(0, 50),
+      is_new: Math.random() > 0.7
+    });
+  }
+  return users;
+}
+
+function generateRiders() {
+  const riders = [];
+  for (let i = 1; i <= 100; i++) {
+    riders.push({
+      id: `rider_${padId(i)}`,
+      name: `骑手${padId(i)}`,
+      status: 'idle',
+      location: { lng: 116.3 + randFloat(0, 0.3), lat: 39.8 + randFloat(0, 0.2) },
+      stats: {
+        total_orders: rand(50, 500),
+        avg_delivery_time: rand(20, 40),
+        rating: randFloat(4.0, 5.0),
+        rejection_rate: randFloat(0.01, 0.1)
+      },
+      current_orders: [],
+      max_concurrent: 3
+    });
+  }
+  return riders;
+}
+
+function generateOrders(merchants, users) {
+  const orders = [];
+  const statuses = ['CREATED', 'CREATED', 'PAID', 'PAID', 'PAID', 'ACCEPTED', 'ACCEPTED', 'DISPATCHED', 'DELIVERING', 'DONE'];
+  
+  for (let i = 1; i <= 100; i++) {
+    const merchant = pick(merchants);
+    const user = pick(users);
+    const items = merchant.menu.slice(0, rand(1, 3)).map(p => ({
+      name: p.name,
+      price: p.price,
+      quantity: rand(1, 2)
+    }));
+    const total = items.reduce((s, it) => s + it.price * it.quantity, 0);
+    const status = pick(statuses);
+    
+    orders.push({
+      id: `ORD-${uuid()}`,
+      user_id: user.id,
+      merchant_id: merchant.id,
+      rider_id: null,
+      status: status,
+      items: items,
+      total_price: total,
+      delivery_address: user.address,
+      merchant_subsidy: 0,
+      platform_subsidy: 0,
+      final_price: total,
+      delivery_fee: rand(3, 8),
+      rider_payment: 0,
+      created_at: now(),
+      updated_at: now(),
+      reject_reason: null
+    });
+  }
+  return orders;
+}
+
+function generateConfig() {
+  return {
+    goal: 'balanced',
+    constraint: 'no_conversion_drop',
+    strategies: ['fair_dispatch'],
+    platform_subsidy: {
+      enabled: true,
+      goal: 'gmv_growth',
+      budget_per_order: 10,
+      category_weights: CATEGORIES.reduce((o, c) => { o[c.id] = 1.0; return o; }, {}),
+      time_multiplier: { morning: 1.2, lunch: 1.5, afternoon: 1.0, dinner: 1.3, night: 0.8 }
+    },
+    dispatch_config: {
+      goal: 'balanced',
+      max_concurrent_per_rider: 3,
+      max_distance_km: 5
+    }
+  };
+}
+
+function initializeData() {
+  const merchants = generateMerchants();
+  const users = generateUsers();
+  const riders = generateRiders();
+  const orders = generateOrders(merchants, users);
+  const config = generateConfig();
+  
+  LocalStore._write('merchants', merchants);
+  LocalStore._write('users', users);
+  LocalStore._write('riders', riders);
+  LocalStore._write('orders', orders);
+  LocalStore._write('config', config);
+  LocalStore._write('a2a_messages', []);
+  LocalStore._write('promotions', []);
+  LocalStore._write('promotion_usage', []);
+  LocalStore._write('subsidy_cache', { products: [], updated_at: null });
+  
+  console.log('Data initialized:', {
+    merchants: merchants.length,
+    users: users.length,
+    riders: riders.length,
+    orders: orders.length
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Section 5: MCP Tools (17 Original + 11 New = 28 Total)
+   ════════════════════════════════════════════════════════════════ */
+
+// --- User Tools ---
+function tool_list_merchants(category = null) {
+  let merchants = LocalStore.all('merchants');
+  if (category) merchants = merchants.filter(m => m.category === category);
+  return { merchants: merchants.map(m => ({ id: m.id, name: m.name, category: m.category, emoji: m.emoji, address: m.address })) };
+}
+
+function tool_get_merchant_menu(merchant_id) {
+  const m = LocalStore.get('merchants', merchant_id);
+  if (!m) return { error: `商家 ${merchant_id} 不存在` };
+  return { merchant_id: m.id, name: m.name, emoji: m.emoji, menu: m.menu };
+}
+
+function tool_search_products(keyword, category = null, sort_by = 'default') {
+  let merchants = LocalStore.all('merchants');
+  if (category) merchants = merchants.filter(m => m.category === category);
+  
+  const results = [];
+  for (const m of merchants) {
+    for (const p of m.menu) {
+      if (!keyword || p.name.includes(keyword) || m.name.includes(keyword) || m.category.includes(keyword)) {
+        const subsidy = calculateProductSubsidy(m, p);
+        results.push({
+          product_id: p.id,
+          name: p.name,
+          merchant_id: m.id,
+          merchant_name: m.name,
+          merchant_emoji: m.emoji,
+          original_price: p.price,
+          merchant_subsidy: subsidy.merchant,
+          platform_subsidy: subsidy.platform,
+          final_price: p.price - subsidy.merchant - subsidy.platform,
+          tags: subsidy.total > 0 ? ['补贴'] : []
+        });
+      }
+    }
+  }
+  
+  // Sort
+  if (sort_by === 'price_asc') results.sort((a, b) => a.final_price - b.final_price);
+  else if (sort_by === 'price_desc') results.sort((a, b) => b.final_price - a.final_price);
+  else if (sort_by === 'subsidy_desc') results.sort((a, b) => (b.merchant_subsidy + b.platform_subsidy) - (a.merchant_subsidy + a.platform_subsidy));
+  
+  return { products: results.slice(0, 20), total: results.length };
+}
+
+function calculateProductSubsidy(merchant, product) {
+  const config = tool_get_config();
+  let merchantSub = 0, platformSub = 0;
+  
+  if (merchant.subsidy_config?.enabled) {
+    merchantSub = Math.min(product.price * merchant.subsidy_config.max_subsidy_rate, 10);
+  }
+  if (config?.platform_subsidy?.enabled) {
+    platformSub = Math.min(config.platform_subsidy.budget_per_order * 0.3, 5);
+  }
+  
+  return {
+    merchant: Math.round(merchantSub * 100) / 100,
+    platform: Math.round(platformSub * 100) / 100,
+    total: Math.round((merchantSub + platformSub) * 100) / 100
+  };
+}
+
+function tool_create_order(user_id, merchant_id, items) {
+  const user = LocalStore.get('users', user_id);
+  if (!user) return { error: `用户 ${user_id} 不存在` };
+  const merchant = LocalStore.get('merchants', merchant_id);
+  if (!merchant) return { error: `商家 ${merchant_id} 不存在` };
+  
+  const menu = {};
+  merchant.menu.forEach(p => menu[p.name] = p);
+  
+  const normItems = [];
+  let totalOriginal = 0, totalMerchantSub = 0, totalPlatformSub = 0;
+  
+  for (const it of items) {
+    const name = typeof it === 'string' ? it : it.name;
+    const qty = typeof it === 'object' ? (it.quantity || 1) : 1;
+    const prod = menu[name];
+    if (!prod) return { error: `菜品「${name}」不在商家菜单中` };
+    
+    const subsidy = calculateProductSubsidy(merchant, prod);
+    normItems.push({ name, price: prod.price, quantity: qty, merchant_subsidy: subsidy.merchant, platform_subsidy: subsidy.platform });
+    totalOriginal += prod.price * qty;
+    totalMerchantSub += subsidy.merchant * qty;
+    totalPlatformSub += subsidy.platform * qty;
+  }
+  
+  const finalPrice = totalOriginal - totalMerchantSub - totalPlatformSub;
+  const order = {
+    id: `ORD-${uuid()}`,
+    user_id, merchant_id,
+    rider_id: null,
+    status: 'CREATED',
+    items: normItems,
+    total_price: Math.round(totalOriginal * 100) / 100,
+    merchant_subsidy: Math.round(totalMerchantSub * 100) / 100,
+    platform_subsidy: Math.round(totalPlatformSub * 100) / 100,
+    final_price: Math.round(finalPrice * 100) / 100,
+    delivery_address: user.address,
+    delivery_fee: rand(3, 8),
+    rider_payment: 0,
+    created_at: now(),
+    updated_at: now(),
+    reject_reason: null
+  };
+  
+  LocalStore.put('orders', order);
+  return { order, message: `订单已创建，原价 ¥${order.total_price}，补贴后 ¥${order.final_price}` };
+}
+
+function tool_pay_order(order_id) {
+  const o = LocalStore.get('orders', order_id);
+  if (!o) return { error: `订单 ${order_id} 不存在` };
+  if (o.status !== 'CREATED') return { error: `状态 ${o.status} 不可支付（需 CREATED）` };
+  
+  const user = LocalStore.get('users', o.user_id);
+  if (!user) return { error: '用户不存在' };
+  
+  const payAmount = o.final_price + (o.delivery_fee || 0);
+  if (user.balance < payAmount) return { error: `余额不足（余额 ${user.balance}，需 ${payAmount}）` };
+  
+  user.balance = Math.round((user.balance - payAmount) * 100) / 100;
+  LocalStore.put('users', user);
+  
+  o.status = 'PAID';
+  o.updated_at = now();
+  LocalStore.put('orders', o);
+  
+  return { order: o, message: `支付成功，扣款 ¥${payAmount}` };
+}
+
+function tool_cancel_order(order_id, reason = '') {
+  const o = LocalStore.get('orders', order_id);
+  if (!o) return { error: `订单 ${order_id} 不存在` };
+  if (!['CREATED', 'PAID', 'ACCEPTED'].includes(o.status)) return { error: `状态 ${o.status} 不可取消` };
+  
+  if (['PAID', 'ACCEPTED'].includes(o.status)) {
+    const user = LocalStore.get('users', o.user_id);
+    if (user) {
+      const refund = o.final_price + (o.delivery_fee || 0);
+      user.balance = Math.round((user.balance + refund) * 100) / 100;
+      LocalStore.put('users', user);
+    }
+  }
+  
+  o.status = 'CANCELLED';
+  o.cancel_reason = reason;
+  o.updated_at = now();
+  LocalStore.put('orders', o);
+  
+  return { order: o, message: '订单已取消' };
+}
+
+function tool_get_order(order_id) {
+  const o = LocalStore.get('orders', order_id);
+  return o ? { order: o } : { error: `订单 ${order_id} 不存在` };
+}
+
+function tool_list_orders(user_id = null, merchant_id = null, status = null) {
+  let orders = LocalStore.all('orders');
+  if (user_id) orders = orders.filter(o => o.user_id === user_id);
+  if (merchant_id) orders = orders.filter(o => o.merchant_id === merchant_id);
+  if (status) orders = orders.filter(o => o.status === status);
+  return { orders };
+}
+
+// --- Merchant Tools ---
+function tool_accept_order(order_id) {
+  const o = LocalStore.get('orders', order_id);
+  if (!o) return { error: `订单 ${order_id} 不存在` };
+  if (o.status !== 'PAID') return { error: `状态 ${o.status} 不可接单（需 PAID）` };
+  
+  o.status = 'ACCEPTED';
+  o.updated_at = now();
+  LocalStore.put('orders', o);
+  
+  return { order: o, message: '已接单' };
+}
+
+function tool_reject_order(order_id, reason = '商家原因') {
+  const o = LocalStore.get('orders', order_id);
+  if (!o) return { error: `订单 ${order_id} 不存在` };
+  if (o.status !== 'PAID') return { error: `状态 ${o.status} 不可拒单（需 PAID）` };
+  
+  const user = LocalStore.get('users', o.user_id);
+  if (user) {
+    const refund = o.final_price + (o.delivery_fee || 0);
+    user.balance = Math.round((user.balance + refund) * 100) / 100;
+    LocalStore.put('users', user);
+  }
+  
+  o.status = 'CANCELLED';
+  o.reject_reason = reason;
+  o.updated_at = now();
+  LocalStore.put('orders', o);
+  
+  return { order: o, message: `已拒单：${reason}` };
+}
+
+function tool_set_merchant_subsidy(merchant_id, config) {
+  const m = LocalStore.get('merchants', merchant_id);
+  if (!m) return { error: `商家 ${merchant_id} 不存在` };
+  
+  m.subsidy_config = { ...m.subsidy_config, ...config };
+  LocalStore.put('merchants', m);
+  
+  return { merchant: m, message: '补贴设置已更新' };
+}
+
+// --- Platform Tools ---
+function tool_list_available_riders() {
+  const riders = LocalStore.all('riders').filter(r => 
+    r.status === 'idle' || (r.current_orders?.length || 0) < r.max_concurrent
+  );
+  return { riders };
+}
+
+function tool_calculate_dispatch(order_id) {
+  const o = LocalStore.get('orders', order_id);
+  if (!o) return { error: `订单 ${order_id} 不存在` };
+  
+  const merchant = LocalStore.get('merchants', o.merchant_id);
+  const user = LocalStore.get('users', o.user_id);
+  const config = tool_get_config();
+  const riders = tool_list_available_riders().riders;
+  
+  if (riders.length === 0) return { error: '没有可用骑手' };
+  
+  // Calculate scores for each rider
+  const scored = riders.map(r => {
+    const distToMerchant = Math.sqrt(
+      Math.pow((r.location.lng - merchant.location.lng) * 111, 2) +
+      Math.pow((r.location.lat - merchant.location.lat) * 111, 2)
+    );
+    const distToUser = Math.sqrt(
+      Math.pow((merchant.location.lng - user.location.lng) * 111, 2) +
+      Math.pow((merchant.location.lat - user.location.lat) * 111, 2)
+    );
+    const totalDist = distToMerchant + distToUser;
+    const estimatedTime = Math.round(totalDist * 5 + 10 + rand(-3, 3));
+    const baseFee = Math.round(totalDist * 1.5 + 3);
+    const riderPayment = Math.round(baseFee * (1 + (5 - r.stats.rating) * 0.1) * 100) / 100;
+    const platformCost = Math.round((riderPayment - baseFee + rand(0, 2)) * 100) / 100;
+    
+    let score = 100 - totalDist * 10 + r.stats.rating * 5 - r.stats.rejection_rate * 50;
+    if (config?.dispatch_config?.goal === 'cost_first') score -= riderPayment * 2;
+    if (config?.dispatch_config?.goal === 'time_first') score -= estimatedTime;
+    
+    return {
+      rider: r,
+      score,
+      delivery_fee: baseFee,
+      estimated_time: estimatedTime,
+      rider_payment: riderPayment,
+      platform_cost: platformCost,
+      distance: Math.round(totalDist * 100) / 100
+    };
+  });
+  
+  scored.sort((a, b) => b.score - a.score);
+  const best = scored[0];
+  
+  return {
+    recommended_rider: best.rider.id,
+    rider_name: best.rider.name,
+    delivery_fee: best.delivery_fee,
+    estimated_time: best.estimated_time,
+    rider_payment: best.rider_payment,
+    platform_cost: best.platform_cost,
+    distance_km: best.distance,
+    reasoning: `距离 ${best.distance}km，评分 ${best.rider.stats.rating}，预计 ${best.estimated_time} 分钟`,
+    alternatives: scored.slice(1, 4).map(s => ({ rider_id: s.rider.id, name: s.rider.name, time: s.estimated_time }))
+  };
+}
+
+function tool_dispatch_order(order_id, rider_id) {
+  const o = LocalStore.get('orders', order_id);
+  if (!o) return { error: `订单 ${order_id} 不存在` };
+  if (o.status !== 'ACCEPTED') return { error: `状态 ${o.status} 不可派单（需 ACCEPTED）` };
+  
+  const r = LocalStore.get('riders', rider_id);
+  if (!r) return { error: `骑手 ${rider_id} 不存在` };
+  if (r.status !== 'idle' && (r.current_orders?.length || 0) >= r.max_concurrent) {
+    return { error: `骑手 ${rider_id} 当前已满载` };
+  }
+  
+  // Calculate dispatch info
+  const dispatch = tool_calculate_dispatch(order_id);
+  
+  o.status = 'DISPATCHED';
+  o.rider_id = rider_id;
+  o.rider_payment = dispatch.rider_payment || rand(5, 10);
+  o.updated_at = now();
+  LocalStore.put('orders', o);
+  
+  r.status = 'busy';
+  r.current_orders = [...(r.current_orders || []), order_id];
+  LocalStore.put('riders', r);
+  
+  return { order: o, message: `已派单给骑手 ${r.name}（预计 ${dispatch.estimated_time || 30} 分钟）` };
+}
+
+function tool_batch_dispatch(order_ids) {
+  const results = [];
+  for (const oid of order_ids) {
+    const dispatch = tool_calculate_dispatch(oid);
+    if (dispatch.error) {
+      results.push({ order_id: oid, success: false, error: dispatch.error });
+    } else {
+      const res = tool_dispatch_order(oid, dispatch.recommended_rider);
+      results.push({ order_id: oid, success: !res.error, ...res });
+    }
+  }
+  return { results, success_count: results.filter(r => r.success).length };
+}
+
+// --- Rider Tools ---
+function tool_start_delivery(order_id) {
+  const o = LocalStore.get('orders', order_id);
+  if (!o) return { error: `订单 ${order_id} 不存在` };
+  if (o.status !== 'DISPATCHED') return { error: `状态 ${o.status} 不可开始配送（需 DISPATCHED）` };
+  
+  o.status = 'DELIVERING';
+  o.updated_at = now();
+  LocalStore.put('orders', o);
+  
+  return { order: o, message: '开始配送' };
+}
+
+function tool_complete_delivery(order_id) {
+  const o = LocalStore.get('orders', order_id);
+  if (!o) return { error: `订单 ${order_id} 不存在` };
+  if (o.status !== 'DELIVERING') return { error: `状态 ${o.status} 不可完成配送（需 DELIVERING）` };
+  
+  o.status = 'DONE';
+  o.updated_at = now();
+  LocalStore.put('orders', o);
+  
+  if (o.rider_id) {
+    const r = LocalStore.get('riders', o.rider_id);
+    if (r) {
+      r.current_orders = (r.current_orders || []).filter(id => id !== order_id);
+      r.status = r.current_orders.length > 0 ? 'busy' : 'idle';
+      r.stats.total_orders++;
+      LocalStore.put('riders', r);
+    }
+  }
+  
+  return { order: o, message: '配送完成' };
+}
+
+// --- Config Tools ---
+function tool_get_config() {
+  const data = LocalStore._read('config');
+  // config 是对象，不是数组；如果是空数组或空对象则重新生成
+  if (!data || Array.isArray(data) || Object.keys(data).length === 0) {
+    const cfg = generateConfig();
+    LocalStore._write('config', cfg);
+    return cfg;
+  }
+  return data;
+}
+
+function tool_update_config(updates) {
+  const cfg = tool_get_config();
+  Object.assign(cfg, updates);
+  LocalStore._write('config', cfg);
+  return { config: cfg, message: '配置已更新' };
+}
+
+function tool_set_platform_subsidy(config) {
+  const cfg = tool_get_config();
+  cfg.platform_subsidy = { ...cfg.platform_subsidy, ...config };
+  LocalStore._write('config', cfg);
+  return { config: cfg.platform_subsidy, message: '平台补贴设置已更新' };
+}
+
+function tool_get_platform_stats() {
+  const orders = LocalStore.all('orders');
+  const riders = LocalStore.all('riders');
+  const merchants = LocalStore.all('merchants');
+  
+  const statusCount = {};
+  let totalRevenue = 0, totalSubsidy = 0;
+  
+  for (const o of orders) {
+    statusCount[o.status] = (statusCount[o.status] || 0) + 1;
+    if (o.status === 'DONE') {
+      totalRevenue += o.final_price;
+      totalSubsidy += (o.merchant_subsidy || 0) + (o.platform_subsidy || 0);
+    }
+  }
+  
+  const doneOrders = orders.filter(o => o.status === 'DONE');
+  
+  return {
+    total_merchants: merchants.length,
+    total_users: LocalStore.all('users').length,
+    total_riders: riders.length,
+    idle_riders: riders.filter(r => r.status === 'idle').length,
+    total_orders: orders.length,
+    orders_by_status: statusCount,
+    total_revenue: Math.round(totalRevenue * 100) / 100,
+    total_subsidy: Math.round(totalSubsidy * 100) / 100,
+    avg_order_value: doneOrders.length ? Math.round(totalRevenue / doneOrders.length * 100) / 100 : 0
+  };
+}
+
+function tool_update_order(order_id, fields) {
+  const o = LocalStore.get('orders', order_id);
+  if (!o) return { error: `订单 ${order_id} 不存在` };
+  
+  for (const k of ['id', 'status', 'user_id', 'merchant_id']) {
+    if (k in fields) return { error: `不允许修改 ${k}` };
+  }
+  
+  Object.assign(o, fields);
+  o.updated_at = now();
+  LocalStore.put('orders', o);
+  
+  return { order: o, message: '已更新' };
+}
+
+// --- Subsidy Context Tools (LLM Dynamic Pricing) ---
+function tool_get_subsidy_context(merchant_ids) {
+  const config = tool_get_config();
+  const orders = LocalStore.all('orders');
+  const allMerchants = LocalStore.all('merchants');
+  
+  // Calculate budget consumed
+  let totalPlatformSubsidy = 0;
+  let totalMerchantSubsidy = 0;
+  const categorySubsidy = {};
+  for (const o of orders) {
+    totalPlatformSubsidy += o.platform_subsidy || 0;
+    totalMerchantSubsidy += o.merchant_subsidy || 0;
+    const m = allMerchants.find(x => x.id === o.merchant_id);
+    if (m) {
+      categorySubsidy[m.category] = (categorySubsidy[m.category] || 0) + (o.platform_subsidy || 0) + (o.merchant_subsidy || 0);
+    }
+  }
+  
+  // Time period
+  const hour = new Date().getHours();
+  let timePeriod = 'afternoon';
+  if (hour < 10) timePeriod = 'morning';
+  else if (hour < 14) timePeriod = 'lunch';
+  else if (hour < 17) timePeriod = 'afternoon';
+  else if (hour < 21) timePeriod = 'dinner';
+  else timePeriod = 'night';
+  
+  // Merchant subsidy configs (filtered if merchant_ids provided)
+  let targetMerchants = allMerchants;
+  if (merchant_ids && merchant_ids.length > 0) {
+    targetMerchants = allMerchants.filter(m => merchant_ids.includes(m.id));
+  } else {
+    targetMerchants = allMerchants.slice(0, 20);
+  }
+  
+  const merchantSummaries = targetMerchants.map(m => ({
+    id: m.id,
+    name: m.name,
+    category: m.category,
+    subsidy_enabled: m.subsidy_config?.enabled || false,
+    subsidy_goal: m.subsidy_config?.goal || 'none',
+    max_subsidy_rate: m.subsidy_config?.max_subsidy_rate || 0,
+    daily_budget: m.subsidy_config?.daily_budget || 0,
+    min_order_amount: m.subsidy_config?.min_order_amount || 0
+  }));
+  
+  const doneOrders = orders.filter(o => o.status === 'DONE');
+  
+  return {
+    platform_subsidy_config: config.platform_subsidy || {},
+    platform_goal: config.goal || 'balanced',
+    platform_constraint: config.constraint || 'none',
+    budget_status: {
+      total_platform_subsidy_spent: Math.round(totalPlatformSubsidy * 100) / 100,
+      total_merchant_subsidy_spent: Math.round(totalMerchantSubsidy * 100) / 100,
+      budget_per_order: config.platform_subsidy?.budget_per_order || 10,
+      category_subsidy_spent: categorySubsidy
+    },
+    order_stats: {
+      total_orders: orders.length,
+      completed_orders: doneOrders.length,
+      avg_order_value: doneOrders.length ? Math.round(doneOrders.reduce((s, o) => s + o.final_price, 0) / doneOrders.length * 100) / 100 : 0,
+      total_revenue: Math.round(doneOrders.reduce((s, o) => s + o.final_price, 0) * 100) / 100
+    },
+    time_context: {
+      period: timePeriod,
+      multiplier: config.platform_subsidy?.time_multiplier?.[timePeriod] || 1.0,
+      all_multipliers: config.platform_subsidy?.time_multiplier || {}
+    },
+    category_weights: config.platform_subsidy?.category_weights || {},
+    merchant_summaries: merchantSummaries
+  };
+}
+
+function tool_set_product_subsidies(subsidies) {
+  if (!Array.isArray(subsidies) || subsidies.length === 0) {
+    return { error: '补贴决策列表不能为空' };
+  }
+  
+  const config = tool_get_config();
+  const maxPerOrder = config.platform_subsidy?.budget_per_order || 10;
+  
+  const results = [];
+  for (const s of subsidies) {
+    const merchant = LocalStore.get('merchants', s.merchant_id);
+    if (!merchant) continue;
+    
+    const prod = merchant.menu.find(p => p.id === s.product_id);
+    if (!prod) continue;
+    
+    // Validate platform subsidy within budget
+    let platformSub = Math.max(0, Math.min(s.platform_subsidy || 0, maxPerOrder));
+    
+    // Validate merchant subsidy within their config
+    let merchantSub = Math.max(0, s.merchant_subsidy || 0);
+    if (merchant.subsidy_config?.enabled && merchant.subsidy_config?.max_subsidy_rate) {
+      merchantSub = Math.min(merchantSub, prod.price * merchant.subsidy_config.max_subsidy_rate);
+    } else if (!merchant.subsidy_config?.enabled) {
+      merchantSub = 0;
+    }
+    
+    const finalPrice = Math.max(0, prod.price - merchantSub - platformSub);
+    
+    results.push({
+      product_id: s.product_id,
+      name: prod.name,
+      merchant_id: merchant.id,
+      merchant_name: merchant.name,
+      merchant_emoji: merchant.emoji,
+      original_price: prod.price,
+      merchant_subsidy: Math.round(merchantSub * 100) / 100,
+      platform_subsidy: Math.round(platformSub * 100) / 100,
+      final_price: Math.round(finalPrice * 100) / 100,
+      sort_score: s.sort_score || 0,
+      reason: s.reason || '',
+      tags: (merchantSub + platformSub) > 0 ? ['补贴', 'LLM定价'] : []
+    });
+  }
+  
+  // Sort by sort_score descending
+  results.sort((a, b) => (b.sort_score || 0) - (a.sort_score || 0));
+  
+  // Cache results
+  LocalStore._write('subsidy_cache', { products: results, updated_at: now() });
+  
+  return { products: results, total: results.length, message: `已完成 ${results.length} 个商品的LLM动态定价` };
+}
+
+// --- Promotion Tools ---
+function tool_create_promotion(title, description, type, rules, reward) {
+  if (!title || !description) return { error: '活动标题和描述不能为空' };
+  const validTypes = ['fixed_discount', 'percentage', 'bonus_credit', 'free_delivery'];
+  if (!validTypes.includes(type)) type = 'bonus_credit';
+  
+  const promo = {
+    id: `promo_${uuid()}`,
+    title,
+    description,
+    type,
+    rules: {
+      min_order_amount: rules?.min_order_amount || 0,
+      target_users: rules?.target_users || 'all',
+      target_categories: rules?.target_categories || null,
+      max_uses_per_user: rules?.max_uses_per_user || 1,
+      total_budget: rules?.total_budget || 1000,
+      per_user_amount: rules?.per_user_amount || 10
+    },
+    reward: {
+      type: reward?.type || 'credit',
+      amount: reward?.amount || rules?.per_user_amount || 10
+    },
+    status: 'active',
+    budget_used: 0,
+    usage_count: 0,
+    created_at: now()
+  };
+  
+  LocalStore.put('promotions', promo);
+  return { promotion: promo, message: `活动「${title}」已创建` };
+}
+
+function tool_list_promotions(status) {
+  let promos = LocalStore.all('promotions');
+  if (status) promos = promos.filter(p => p.status === status);
+  return { promotions: promos };
+}
+
+function tool_apply_promotion(promotion_id, user_id) {
+  const promo = LocalStore.get('promotions', promotion_id);
+  if (!promo) return { error: `活动 ${promotion_id} 不存在` };
+  if (promo.status !== 'active') return { error: '活动已结束或暂停' };
+  
+  const user = LocalStore.get('users', user_id);
+  if (!user) return { error: `用户 ${user_id} 不存在` };
+  
+  // 检查预算
+  if (promo.budget_used + promo.reward.amount > promo.rules.total_budget) {
+    return { error: '活动预算已用完' };
+  }
+  
+  // 检查用户是否已参与（简易检查）
+  const usageLog = LocalStore.all('promotion_usage').filter(u => u.promotion_id === promotion_id && u.user_id === user_id);
+  if (usageLog.length >= promo.rules.max_uses_per_user) {
+    return { error: '您已达到该活动的参与上限' };
+  }
+  
+  // 检查目标用户
+  if (promo.rules.target_users === 'new' && !user.is_new) {
+    return { error: '该活动仅限新用户参与' };
+  }
+  
+  // 发放奖励：加余额
+  const rewardAmount = promo.reward.amount;
+  user.balance = Math.round((user.balance + rewardAmount) * 100) / 100;
+  LocalStore.put('users', user);
+  
+  // 更新活动统计
+  promo.budget_used = Math.round((promo.budget_used + rewardAmount) * 100) / 100;
+  promo.usage_count++;
+  if (promo.budget_used >= promo.rules.total_budget) {
+    promo.status = 'ended';
+  }
+  LocalStore.put('promotions', promo);
+  
+  // 记录使用日志
+  LocalStore.put('promotion_usage', {
+    id: `pu_${uuid()}`,
+    promotion_id,
+    user_id,
+    amount: rewardAmount,
+    applied_at: now()
+  });
+  
+  return {
+    success: true,
+    reward_amount: rewardAmount,
+    new_balance: user.balance,
+    message: `已领取活动奖励 ¥${rewardAmount}，当前余额 ¥${user.balance}`
+  };
+}
+
+// Tool Registry
+const TOOL_FUNCTIONS = {
+  list_merchants: tool_list_merchants,
+  get_merchant_menu: tool_get_merchant_menu,
+  search_products: tool_search_products,
+  create_order: tool_create_order,
+  pay_order: tool_pay_order,
+  cancel_order: tool_cancel_order,
+  get_order: tool_get_order,
+  list_orders: tool_list_orders,
+  accept_order: tool_accept_order,
+  reject_order: tool_reject_order,
+  set_merchant_subsidy: tool_set_merchant_subsidy,
+  list_available_riders: tool_list_available_riders,
+  calculate_dispatch: tool_calculate_dispatch,
+  dispatch_order: tool_dispatch_order,
+  batch_dispatch: tool_batch_dispatch,
+  start_delivery: tool_start_delivery,
+  complete_delivery: tool_complete_delivery,
+  get_config: tool_get_config,
+  update_config: tool_update_config,
+  set_platform_subsidy: tool_set_platform_subsidy,
+  get_platform_stats: tool_get_platform_stats,
+  update_order: tool_update_order,
+  get_subsidy_context: tool_get_subsidy_context,
+  set_product_subsidies: tool_set_product_subsidies,
+  create_promotion: tool_create_promotion,
+  list_promotions: tool_list_promotions,
+  apply_promotion: tool_apply_promotion
+};
+
+const TOOL_SCHEMAS = [
+  { type: 'function', function: { name: 'list_merchants', description: '列出所有商家', parameters: { type: 'object', properties: { category: { type: 'string', description: '品类筛选' } } } } },
+  { type: 'function', function: { name: 'get_merchant_menu', description: '获取商家菜单', parameters: { type: 'object', properties: { merchant_id: { type: 'string' } }, required: ['merchant_id'] } } },
+  { type: 'function', function: { name: 'search_products', description: '搜索商品（含补贴信息）', parameters: { type: 'object', properties: { keyword: { type: 'string' }, category: { type: 'string' }, sort_by: { type: 'string', enum: ['default', 'price_asc', 'price_desc', 'subsidy_desc'] } } } } },
+  { type: 'function', function: { name: 'create_order', description: '创建订单', parameters: { type: 'object', properties: { user_id: { type: 'string' }, merchant_id: { type: 'string' }, items: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, quantity: { type: 'integer' } } } } }, required: ['user_id', 'merchant_id', 'items'] } } },
+  { type: 'function', function: { name: 'pay_order', description: '支付订单', parameters: { type: 'object', properties: { order_id: { type: 'string' } }, required: ['order_id'] } } },
+  { type: 'function', function: { name: 'cancel_order', description: '取消订单', parameters: { type: 'object', properties: { order_id: { type: 'string' }, reason: { type: 'string' } }, required: ['order_id'] } } },
+  { type: 'function', function: { name: 'get_order', description: '查询订单', parameters: { type: 'object', properties: { order_id: { type: 'string' } }, required: ['order_id'] } } },
+  { type: 'function', function: { name: 'list_orders', description: '列出订单', parameters: { type: 'object', properties: { user_id: { type: 'string' }, merchant_id: { type: 'string' }, status: { type: 'string' } } } } },
+  { type: 'function', function: { name: 'accept_order', description: '商户接单', parameters: { type: 'object', properties: { order_id: { type: 'string' } }, required: ['order_id'] } } },
+  { type: 'function', function: { name: 'reject_order', description: '商户拒单', parameters: { type: 'object', properties: { order_id: { type: 'string' }, reason: { type: 'string' } }, required: ['order_id'] } } },
+  { type: 'function', function: { name: 'set_merchant_subsidy', description: '设置商家补贴', parameters: { type: 'object', properties: { merchant_id: { type: 'string' }, config: { type: 'object' } }, required: ['merchant_id', 'config'] } } },
+  { type: 'function', function: { name: 'list_available_riders', description: '列出可用骑手', parameters: { type: 'object', properties: {} } } },
+  { type: 'function', function: { name: 'calculate_dispatch', description: '计算最优派单', parameters: { type: 'object', properties: { order_id: { type: 'string' } }, required: ['order_id'] } } },
+  { type: 'function', function: { name: 'dispatch_order', description: '派单给骑手', parameters: { type: 'object', properties: { order_id: { type: 'string' }, rider_id: { type: 'string' } }, required: ['order_id', 'rider_id'] } } },
+  { type: 'function', function: { name: 'batch_dispatch', description: '批量派单', parameters: { type: 'object', properties: { order_ids: { type: 'array', items: { type: 'string' } } }, required: ['order_ids'] } } },
+  { type: 'function', function: { name: 'start_delivery', description: '开始配送', parameters: { type: 'object', properties: { order_id: { type: 'string' } }, required: ['order_id'] } } },
+  { type: 'function', function: { name: 'complete_delivery', description: '完成配送', parameters: { type: 'object', properties: { order_id: { type: 'string' } }, required: ['order_id'] } } },
+  { type: 'function', function: { name: 'get_config', description: '获取平台配置', parameters: { type: 'object', properties: {} } } },
+  { type: 'function', function: { name: 'update_config', description: '更新平台配置', parameters: { type: 'object', properties: { goal: { type: 'string' }, strategies: { type: 'array' } } } } },
+  { type: 'function', function: { name: 'set_platform_subsidy', description: '设置平台补贴', parameters: { type: 'object', properties: { config: { type: 'object' } }, required: ['config'] } } },
+  { type: 'function', function: { name: 'get_platform_stats', description: '获取平台统计', parameters: { type: 'object', properties: {} } } },
+  { type: 'function', function: { name: 'update_order', description: '更新订单信息', parameters: { type: 'object', properties: { order_id: { type: 'string' }, fields: { type: 'object' } }, required: ['order_id', 'fields'] } } },
+  { type: 'function', function: { name: 'get_subsidy_context', description: '获取补贴决策上下文（平台预算消耗、商户策略、时段系数等，用于LLM动态定价）', parameters: { type: 'object', properties: { merchant_ids: { type: 'array', items: { type: 'string' }, description: '指定商户ID列表，不传则返回前20个商户' } } } } },
+  { type: 'function', function: { name: 'set_product_subsidies', description: 'LLM设置商品补贴和排序（根据上下文动态计算每个商品的商户补贴、平台补贴、排序分数）', parameters: { type: 'object', properties: { subsidies: { type: 'array', items: { type: 'object', properties: { product_id: { type: 'string' }, merchant_id: { type: 'string' }, merchant_subsidy: { type: 'number', description: '商户补贴金额' }, platform_subsidy: { type: 'number', description: '平台补贴金额' }, sort_score: { type: 'number', description: '排序分数，越高越靠前' }, reason: { type: 'string', description: '定价和排序理由' } }, required: ['product_id', 'merchant_id', 'merchant_subsidy', 'platform_subsidy', 'sort_score'] } } }, required: ['subsidies'] } } },
+  { type: 'function', function: { name: 'create_promotion', description: '创建运营活动（LLM生成标题、玩法、规则、奖金）', parameters: { type: 'object', properties: { title: { type: 'string', description: '活动标题' }, description: { type: 'string', description: '活动描述和玩法' }, type: { type: 'string', enum: ['fixed_discount', 'percentage', 'bonus_credit', 'free_delivery'], description: '活动类型' }, rules: { type: 'object', description: '活动规则', properties: { min_order_amount: { type: 'number' }, target_users: { type: 'string', enum: ['all', 'new', 'returning'] }, target_categories: { type: 'array', items: { type: 'string' } }, max_uses_per_user: { type: 'integer' }, total_budget: { type: 'number' }, per_user_amount: { type: 'number' } } }, reward: { type: 'object', description: '奖励设置', properties: { type: { type: 'string' }, amount: { type: 'number' } } } }, required: ['title', 'description', 'type', 'rules', 'reward'] } } },
+  { type: 'function', function: { name: 'list_promotions', description: '列出平台运营活动', parameters: { type: 'object', properties: { status: { type: 'string', enum: ['active', 'paused', 'ended'], description: '按状态筛选' } } } } },
+  { type: 'function', function: { name: 'apply_promotion', description: '用户参与活动领取奖励（奖金加到余额）', parameters: { type: 'object', properties: { promotion_id: { type: 'string' }, user_id: { type: 'string' } }, required: ['promotion_id', 'user_id'] } } }
+];
+
+const ROLE_TOOLS = {
+  user: ['list_merchants', 'get_merchant_menu', 'search_products', 'create_order', 'pay_order', 'cancel_order', 'get_order', 'list_orders', 'get_subsidy_context', 'set_product_subsidies', 'list_promotions', 'apply_promotion'],
+  merchant: ['accept_order', 'reject_order', 'get_order', 'list_orders', 'set_merchant_subsidy'],
+  platform: ['list_available_riders', 'calculate_dispatch', 'dispatch_order', 'batch_dispatch', 'get_order', 'list_orders', 'get_platform_stats', 'get_config'],
+  rider: ['start_delivery', 'complete_delivery', 'get_order'],
+  operator: ['get_config', 'update_config', 'set_platform_subsidy', 'get_platform_stats', 'create_promotion', 'list_promotions']
+};
+
+/* ════════════════════════════════════════════════════════════════
+   Section 6: LLM Client
+   ════════════════════════════════════════════════════════════════ */
+function getLLMConfig() {
+  const saved = localStorage.getItem('takeout_llm_config');
+  const config = saved ? JSON.parse(saved) : { ...DEFAULT_CONFIG };
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('url')) config.url = params.get('url');
+  if (params.get('model')) config.model = params.get('model');
+  if (params.get('key')) config.key = params.get('key');
+  return config;
+}
+
+function stripThink(content) {
+  if (!content) return '';
+  return content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+}
+
+async function llmChat(messages, tools = null, maxRetries = 3) {
+  const config = getLLMConfig();
+  const missing = [];
+  if (!config.url) missing.push('API URL');
+  if (!config.model) missing.push('模型名称');
+  if (!config.key) missing.push('API Key');
+  if (missing.length > 0) {
+    throw new Error(`LLM 配置不完整，以下参数为必填项：${missing.join('、')}。请点击右上角"展开配置"填写，或通过URL参数传入（?url=...&model=...&key=...）`);
+  }
+  let lastError = null;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const body = {
+        model: config.model,
+        messages: messages,
+        temperature: 0.1
+      };
+      if (tools && tools.length > 0) {
+        body.tools = tools;
+        body.tool_choice = 'auto';
+      }
+      
+      const resp = await fetch(`${config.url}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.key}`
+        },
+        body: JSON.stringify(body)
+      });
+      
+      if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error(`HTTP ${resp.status}: ${text}`);
+      }
+      
+      return await resp.json();
+    } catch (e) {
+      lastError = e;
+      console.warn(`LLM call failed (attempt ${attempt + 1}):`, e);
+      if (attempt < maxRetries - 1) {
+        await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+      }
+    }
+  }
+  throw lastError;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Section 7: A2A Message Bus
+   ════════════════════════════════════════════════════════════════ */
+const MessageBus = {
+  send(from, to, intent, payload) {
+    const msg = {
+      id: `msg_${uuid()}`,
+      from, to, intent, payload,
+      timestamp: now()
+    };
+    const messages = LocalStore._read('a2a_messages');
+    messages.push(msg);
+    LocalStore._write('a2a_messages', messages.slice(-100)); // Keep last 100
+    return msg;
+  },
+  
+  getAll() {
+    return LocalStore._read('a2a_messages');
+  }
+};
+
+/* ════════════════════════════════════════════════════════════════
+   Section 8: Logger
+   ════════════════════════════════════════════════════════════════ */
+class Logger {
+  constructor(containerId) {
+    this.container = document.getElementById(containerId);
+  }
+  
+  _time() {
+    return new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  }
+  
+  _append(html) {
+    const div = document.createElement('div');
+    div.className = 'log-line';
+    div.innerHTML = `<span class="log-time">[${this._time()}]</span>${html}`;
+    this.container.appendChild(div);
+    this.container.scrollTop = this.container.scrollHeight;
+  }
+  
+  panel(text) { this._append(`<div class="log-panel">${text}</div>`); }
+  info(text) { this._append(`<span class="log-info">${text}</span>`); }
+  tool(name, args) { this._append(`<span class="log-tool">🔧 调用工具: <b>${name}</b>(${this._formatArgs(args)})</span>`); }
+  result(text) { this._append(`<span class="log-result">📋 ${text}</span>`); }
+  error(text) { this._append(`<span class="log-error">❌ ${text}</span>`); }
+  success(text) { this._append(`<span class="log-success">✅ ${text}</span>`); }
+  agent(name, text) { this._append(`<span class="log-agent">💬 [${name}]: ${text}</span>`); }
+  a2a(from, to, intent) { this._append(`<span class="log-a2a">📨 A2A: ${from} → ${to} | ${intent}</span>`); }
+  
+  _formatArgs(args) {
+    if (!args || Object.keys(args).length === 0) return '';
+    return Object.entries(args).map(([k, v]) => {
+      const val = typeof v === 'string' ? `"${v}"` : JSON.stringify(v);
+      return `${k}=${val.length > 50 ? val.slice(0, 50) + '...' : val}`;
+    }).join(', ');
+  }
+  
+  clear() { this.container.innerHTML = ''; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Section 9: Base Agent & 5 Agent Classes
+   ════════════════════════════════════════════════════════════════ */
+class BaseAgent {
+  constructor(agentId, role, displayName, systemPrompt, logger) {
+    this.agentId = agentId;
+    this.role = role;
+    this.displayName = displayName;
+    this.systemPrompt = systemPrompt;
+    this.logger = logger;
+    this.toolNames = ROLE_TOOLS[role] || [];
+  }
+  
+  getToolSchemas() {
+    return TOOL_SCHEMAS.filter(s => this.toolNames.includes(s.function.name));
+  }
+  
+  execTool(name, args) {
+    if (!this.toolNames.includes(name)) return { error: `工具 ${name} 不在权限范围内` };
+    const fn = TOOL_FUNCTIONS[name];
+    if (!fn) return { error: `工具 ${name} 不存在` };
+    try {
+      // Handle different arg patterns
+      if (name === 'list_merchants') return fn(args.category);
+      if (name === 'get_merchant_menu') return fn(args.merchant_id);
+      if (name === 'search_products') return fn(args.keyword, args.category, args.sort_by);
+      if (name === 'create_order') return fn(args.user_id, args.merchant_id, args.items);
+      if (name === 'pay_order' || name === 'accept_order' || name === 'get_order' || name === 'start_delivery' || name === 'complete_delivery' || name === 'calculate_dispatch') return fn(args.order_id);
+      if (name === 'cancel_order' || name === 'reject_order') return fn(args.order_id, args.reason);
+      if (name === 'list_orders') return fn(args.user_id, args.merchant_id, args.status);
+      if (name === 'dispatch_order') return fn(args.order_id, args.rider_id);
+      if (name === 'batch_dispatch') return fn(args.order_ids);
+      if (name === 'set_merchant_subsidy') return fn(args.merchant_id, args.config);
+      if (name === 'update_order') return fn(args.order_id, args.fields);
+      if (name === 'update_config') return fn(args);
+      if (name === 'set_platform_subsidy') return fn(args.config || args);
+      if (name === 'get_subsidy_context') return fn(args.merchant_ids);
+      if (name === 'set_product_subsidies') return fn(args.subsidies);
+      if (name === 'create_promotion') return fn(args.title, args.description, args.type, args.rules, args.reward);
+      if (name === 'list_promotions') return fn(args.status);
+      if (name === 'apply_promotion') return fn(args.promotion_id, args.user_id);
+      return fn();
+    } catch (e) {
+      return { error: `执行错误: ${e.message}` };
+    }
+  }
+  
+  async run(task) {
+    const config = tool_get_config();
+    let sysPrompt = this.systemPrompt;
+    
+    if (config.goal && config.goal !== 'normal') {
+      sysPrompt += `\n\n【当前平台策略】\n目标: ${config.goal}\n策略: ${JSON.stringify(config.strategies || [])}`;
+    }
+    
+    const messages = [
+      { role: 'system', content: sysPrompt },
+      { role: 'user', content: task }
+    ];
+    
+    const tools = this.getToolSchemas();
+    const allResults = [];
+    
+    this.logger.panel(`🤖 [${this.displayName}] ${task}`);
+    
+    for (let round = 0; round < 10; round++) {
+      const resp = await llmChat(messages, tools.length > 0 ? tools : null);
+      
+      if (!resp.choices || !resp.choices[0]) {
+        return { response: 'LLM 未返回有效响应', tool_results: allResults };
+      }
+      
+      const msg = resp.choices[0].message;
+      
+      // No tool calls - final response
+      if (!msg.tool_calls || msg.tool_calls.length === 0) {
+        const content = stripThink(msg.content || '');
+        this.logger.agent(this.displayName, content);
+        return { response: content, tool_results: allResults };
+      }
+      
+      // Execute tool calls
+      const assistantMsg = {
+        role: 'assistant',
+        content: msg.content || '',
+        tool_calls: msg.tool_calls.map(tc => ({
+          id: tc.id,
+          type: 'function',
+          function: { name: tc.function.name, arguments: tc.function.arguments }
+        }))
+      };
+      messages.push(assistantMsg);
+      
+      for (const tc of msg.tool_calls) {
+        const fnName = tc.function.name;
+        let fnArgs = {};
+        try { fnArgs = JSON.parse(tc.function.arguments); } catch {}
+        
+        this.logger.tool(fnName, fnArgs);
+        const result = this.execTool(fnName, fnArgs);
+        const resultStr = JSON.stringify(result);
+        
+        if (result.error) {
+          this.logger.error(result.error);
+        } else {
+          const disp = resultStr.length > 200 ? resultStr.slice(0, 200) + '...' : resultStr;
+          this.logger.result(disp);
+        }
+        
+        allResults.push({ tool: fnName, args: fnArgs, result });
+        messages.push({
+          role: 'tool',
+          tool_call_id: tc.id,
+          content: resultStr
+        });
+      }
+    }
+    
+    return { response: '达到最大处理轮次', tool_results: allResults };
+  }
+}
+
+class UserAgent extends BaseAgent {
+  constructor(userId, logger) {
+    const user = LocalStore.get('users', userId);
+    const name = user ? user.name : userId;
+    super(
+      `user_agent_${userId}`,
+      'user',
+      `用户:${name}`,
+      `你是外卖用户助手。当前用户: ${name}（ID: ${userId}）。
+你的能力：
+1. 浏览商家列表 (list_merchants)
+2. 查看商家菜单 (get_merchant_menu)
+3. 搜索商品 (search_products) - 可按关键词、品类搜索，返回基础补贴信息
+4. 创建订单 (create_order) — items 格式: [{"name": "菜品名", "quantity": 数量}]
+5. 支付订单 (pay_order)
+6. 取消订单 (cancel_order)
+7. 查询订单 (get_order / list_orders)
+8. 查看平台活动 (list_promotions) - 查看当前可参与的活动
+9. 参与活动 (apply_promotion) - 领取活动奖励，奖金加到余额
+10. 获取补贴上下文 (get_subsidy_context) - 获取平台预算消耗、商户策略、时段系数等决策信息
+11. 设置商品补贴 (set_product_subsidies) - 根据上下文为每个商品设定补贴和排序
+
+【LLM动态定价流程 - 搜索商品时必须执行】
+当用户搜索或浏览商品时，你需要执行3步管道：
+步骤1: 调用 search_products 获取原始商品列表
+步骤2: 调用 get_subsidy_context 获取补贴决策上下文（传入相关merchant_ids）
+步骤3: 根据上下文智能决策，调用 set_product_subsidies 设置每个商品的补贴和排序
+  - 根据平台目标(goal)决定补贴力度：gmv_growth则加大补贴、cost_first则控制成本
+  - 根据时段系数(time_multiplier)调整：午餐/晚餐高峰加大补贴
+  - 根据品类权重(category_weights)分配补贴
+  - 根据商户补贴配置(subsidy_config)决定商户补贴额度
+  - 根据已消耗预算(budget_status)控制总支出
+  - sort_score决定商品排序：补贴高、性价比好的商品分数高
+
+【重要】你必须使用工具完成任务。
+【重要】创建订单时，user_id 固定为 "${userId}"。
+【重要】参与活动时，user_id 固定为 "${userId}"。
+【重要】当用户说"点杯咖啡"或类似请求时，执行上述3步管道搜索商品。`,
+      logger
+    );
+    this.userId = userId;
+  }
+}
+
+class MerchantAgent extends BaseAgent {
+  constructor(merchantId, logger) {
+    const merchant = LocalStore.get('merchants', merchantId);
+    const name = merchant ? merchant.name : merchantId;
+    super(
+      `merchant_agent_${merchantId}`,
+      'merchant',
+      `商户:${name}`,
+      `你是商家「${name}」（ID: ${merchantId}）的订单处理助手。
+你的能力：
+1. 查看订单详情 (get_order)
+2. 查看待处理订单 (list_orders with merchant_id and status)
+3. 接受订单 (accept_order)
+4. 拒绝订单 (reject_order) — 必须提供 reason 参数
+5. 设置补贴策略 (set_merchant_subsidy)
+
+【重要】你必须使用工具完成任务。`,
+      logger
+    );
+    this.merchantId = merchantId;
+  }
+}
+
+class PlatformAgent extends BaseAgent {
+  constructor(logger) {
+    super(
+      'platform_agent',
+      'platform',
+      '平台调度',
+      `你是外卖平台智能调度助手。
+你的能力：
+1. 查看可用骑手 (list_available_riders)
+2. 计算最优派单 (calculate_dispatch) - 返回推荐骑手、距离、预计时间和报价
+3. 为订单分配骑手 (dispatch_order) — 需要 order_id 和 rider_id
+4. 批量派单 (batch_dispatch)
+5. 查看订单 (get_order / list_orders)
+6. 查看平台统计 (get_platform_stats)
+7. 查看平台配置 (get_config) - 获取调度目标和约束
+
+【智能调度流程】
+1. 先调用 calculate_dispatch 获取推荐骑手及备选方案
+2. 分析推荐结果：评估距离、预计时间、骑手评分、骑手报酬
+3. 根据平台目标做决策：
+   - balanced: 综合考虑成本、时效和骑手体验
+   - cost_first: 优先选择报酬最低的骑手，降低平台成本
+   - time_first: 优先选择距离最近、评分最高的骑手，保证配送速度
+4. 调用 dispatch_order 完成派单
+5. 在回复中说明选择理由
+
+【约束条件】
+- 不超过骑手最大并发单量
+- 不超过最大配送距离
+- 避免给拒单率高的骑手派单
+【重要】你必须使用工具完成任务。`,
+      logger
+    );
+  }
+}
+
+class RiderAgent extends BaseAgent {
+  constructor(riderId, logger) {
+    const rider = LocalStore.get('riders', riderId);
+    const name = rider ? rider.name : riderId;
+    super(
+      `rider_agent_${riderId}`,
+      'rider',
+      `骑手:${name}`,
+      `你是骑手「${name}」（ID: ${riderId}）。
+你的能力：
+1. 查看订单详情 (get_order)
+2. 开始配送 (start_delivery)
+3. 完成配送 (complete_delivery)
+
+【重要】你必须使用工具完成任务。
+【工作流程】先调用 start_delivery，再调用 complete_delivery。`,
+      logger
+    );
+    this.riderId = riderId;
+  }
+}
+
+class OperatorAgent extends BaseAgent {
+  constructor(logger) {
+    super(
+      'operator_agent',
+      'operator',
+      '平台运营',
+      `你是平台运营助手。
+你的能力：
+1. 查看策略配置 (get_config)
+2. 修改策略配置 (update_config)
+3. 设置平台补贴 (set_platform_subsidy)
+4. 查看平台统计 (get_platform_stats)
+5. 创建运营活动 (create_promotion) — 根据运营需求设计活动标题、玩法、规则和奖金
+6. 查看活动列表 (list_promotions)
+
+可用目标(goal): balanced, cost_first, time_first
+可用策略: fair_dispatch, nearby_rider, rating_priority
+
+【活动设计能力】当被要求设计活动时，你需要：
+- 先调用 get_platform_stats 了解当前平台数据
+- 根据运营目标（拉新、留存、GMV增长等）设计有针对性的活动
+- 生成吸引人的活动标题和描述
+- 设计合理的规则（门槛、目标用户、预算）
+- 设定奖励金额（奖金直接加到用户余额）
+- 调用 create_promotion 创建活动
+
+活动类型: fixed_discount(固定减免), percentage(折扣), bonus_credit(余额奖励), free_delivery(免配送费)
+目标用户: all(全部), new(新用户), returning(老用户)
+【重要】你必须使用工具完成任务。`,
+      logger
+    );
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Section 10: A2UI Renderer (Chat Flow Style)
+   ════════════════════════════════════════════════════════════════ */
+class A2UIRenderer {
+  constructor(containerId, onAction) {
+    this.container = document.getElementById(containerId);
+    this.onAction = onAction || (() => {});
+    this.loadingEl = null;
+  }
+  
+  // 清空容器（仅在需要时调用）
+  clear() { this.container.innerHTML = ''; }
+  
+  // 获取当前时间戳字符串
+  _timestamp() {
+    return new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  }
+  
+  // 创建带时间戳的section容器（append模式）
+  _createSection(title) {
+    this.hideLoading();
+    const section = document.createElement('div');
+    section.className = 'a2ui-section';
+    
+    const timestamp = document.createElement('div');
+    timestamp.className = 'a2ui-timestamp';
+    timestamp.textContent = `${this._timestamp()} - ${title}`;
+    section.appendChild(timestamp);
+    
+    this.container.appendChild(section);
+    this.container.scrollTop = this.container.scrollHeight;
+    return section;
+  }
+  
+  // 显示Loading状态
+  showLoading(text = '正在请求中...') {
+    this.hideLoading();
+    this.loadingEl = document.createElement('div');
+    this.loadingEl.className = 'a2ui-loading';
+    this.loadingEl.innerHTML = `<div class="spinner"></div><span>${text}</span>`;
+    this.container.appendChild(this.loadingEl);
+    this.container.scrollTop = this.container.scrollHeight;
+  }
+  
+  // 隐藏Loading状态
+  hideLoading() {
+    if (this.loadingEl && this.loadingEl.parentNode) {
+      this.loadingEl.parentNode.removeChild(this.loadingEl);
+      this.loadingEl = null;
+    }
+  }
+  
+  // 格式化价格（修复精度问题）
+  _formatPrice(price) {
+    return (typeof price === 'number' ? price : parseFloat(price) || 0).toFixed(2);
+  }
+  
+  renderProducts(products, title = '商品列表') {
+    const section = this._createSection(title);
+    
+    const grid = document.createElement('div');
+    grid.className = 'product-grid';
+    
+    for (const p of products) {
+      const card = document.createElement('div');
+      card.className = 'product-card';
+      
+      const merchantSub = parseFloat(p.merchant_subsidy) || 0;
+      const platformSub = parseFloat(p.platform_subsidy) || 0;
+      const totalSub = merchantSub + platformSub;
+      const originalPrice = parseFloat(p.original_price) || 0;
+      const finalPrice = parseFloat(p.final_price) || (originalPrice - totalSub);
+      
+      const tags = [];
+      if (totalSub > 0) tags.push({ text: `补贴¥${this._formatPrice(totalSub)}`, class: 'subsidy' });
+      if (p.tags?.includes('热销')) tags.push({ text: '热销', class: 'hot' });
+      
+      card.innerHTML = `
+        <div class="product-emoji">${p.merchant_emoji || '🍽️'}</div>
+        <div class="product-name">${p.name}</div>
+        <div class="product-merchant">${p.merchant_name}</div>
+        <div class="product-tags">
+          ${tags.map(t => `<span class="product-tag ${t.class}">${t.text}</span>`).join('')}
+        </div>
+        <div class="price-section">
+          <span class="price-original">¥${this._formatPrice(originalPrice)}</span>
+          <span class="price-final">¥${this._formatPrice(finalPrice)}</span>
+        </div>
+        ${totalSub > 0 ? `<div class="price-subsidy">商家补贴¥${this._formatPrice(merchantSub)} + 平台补贴¥${this._formatPrice(platformSub)}</div>` : ''}
+        <button class="btn btn-primary" data-action="order" data-product='${JSON.stringify(p)}'>立即购买</button>
+      `;
+      
+      card.querySelector('button').addEventListener('click', (e) => {
+        const product = JSON.parse(e.target.dataset.product);
+        this.onAction('order', product);
+      });
+      
+      grid.appendChild(card);
+    }
+    
+    section.appendChild(grid);
+  }
+  
+  // 根据订单状态获取可用操作按钮
+  _getOrderActions(order) {
+    const actions = [];
+    switch (order.status) {
+      case 'CREATED':
+        actions.push({ label: '立即支付', action: 'pay', class: 'btn-primary' });
+        actions.push({ label: '取消订单', action: 'cancel', class: 'btn-danger' });
+        break;
+      case 'PAID':
+        actions.push({ label: '取消订单', action: 'cancel', class: 'btn-danger' });
+        actions.push({ label: '催单', action: 'urge', class: 'btn-warning' });
+        break;
+      case 'ACCEPTED':
+        actions.push({ label: '取消订单', action: 'cancel', class: 'btn-danger' });
+        break;
+      case 'DISPATCHED':
+        actions.push({ label: '联系骑手', action: 'contact_rider', class: 'btn-secondary' });
+        break;
+      case 'DELIVERING':
+        actions.push({ label: '联系骑手', action: 'contact_rider', class: 'btn-secondary' });
+        break;
+      case 'DONE':
+        actions.push({ label: '再来一单', action: 'reorder', class: 'btn-primary' });
+        actions.push({ label: '评价', action: 'rate', class: 'btn-secondary' });
+        break;
+      case 'CANCELLED':
+        actions.push({ label: '再来一单', action: 'reorder', class: 'btn-primary' });
+        break;
+    }
+    return actions;
+  }
+  
+  renderOrders(orders, title = '订单列表') {
+    const section = this._createSection(title);
+    
+    if (orders.length === 0) {
+      const empty = document.createElement('div');
+      empty.textContent = '暂无订单';
+      empty.style.color = 'var(--text-secondary)';
+      empty.style.padding = '20px';
+      empty.style.textAlign = 'center';
+      section.appendChild(empty);
+      return;
+    }
+    
+    for (const o of orders) {
+      const card = document.createElement('div');
+      card.className = 'order-card';
+      
+      const statusClass = `status-${o.status.toLowerCase()}`;
+      const merchant = LocalStore.get('merchants', o.merchant_id);
+      const rider = o.rider_id ? LocalStore.get('riders', o.rider_id) : null;
+      const totalPrice = parseFloat(o.total_price) || 0;
+      const finalPrice = parseFloat(o.final_price) || totalPrice;
+      const merchantSub = parseFloat(o.merchant_subsidy) || 0;
+      const platformSub = parseFloat(o.platform_subsidy) || 0;
+      const hasSubsidy = merchantSub + platformSub > 0;
+      
+      const riderHtml = rider ? `
+        <div class="order-rider">
+          <span>🏍️ ${rider.name}</span>
+          <span>⭐${rider.stats?.rating?.toFixed(1) || '5.0'}</span>
+          ${o.rider_payment ? `<span>报酬 ¥${this._formatPrice(o.rider_payment)}</span>` : ''}
+          ${['DISPATCHED', 'DELIVERING'].includes(o.status) ? `<span>预计${rider.stats?.avg_delivery_time || 30}分钟</span>` : ''}
+        </div>
+      ` : (o.rider_id ? `<div class="order-rider"><span>🏍️ ${o.rider_id}</span></div>` : '');
+      
+      const actions = this._getOrderActions(o);
+      const actionsHtml = actions.length > 0 ? `
+        <div class="order-actions">
+          ${actions.map(a => `<button class="btn ${a.class}" data-action="${a.action}" data-order-id="${o.id}">${a.label}</button>`).join('')}
+        </div>
+      ` : '';
+      
+      card.innerHTML = `
+        <div class="order-header">
+          <span class="order-id">${o.id}</span>
+          <span class="order-status ${statusClass}">${o.status}</span>
+        </div>
+        <div class="order-items">${merchant?.name || o.merchant_id}: ${o.items.map(i => `${i.name}x${i.quantity}`).join(', ')}</div>
+        <div class="order-price">
+          原价: ¥${this._formatPrice(totalPrice)}
+          ${hasSubsidy ? ` → 实付: ¥${this._formatPrice(finalPrice)}` : ''}
+        </div>
+        ${riderHtml}
+        ${actionsHtml}
+      `;
+      
+      // 绑定按钮事件
+      card.querySelectorAll('.order-actions .btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const action = e.target.dataset.action;
+          const orderId = e.target.dataset.orderId;
+          this.onAction(action, { order_id: orderId, order: o });
+        });
+      });
+      
+      section.appendChild(card);
+    }
+  }
+  
+  renderStats(stats) {
+    const section = this._createSection('平台统计');
+    
+    const grid = document.createElement('div');
+    grid.className = 'stats-grid';
+    
+    const items = [
+      { label: '商家总数', value: stats.total_merchants },
+      { label: '用户总数', value: stats.total_users },
+      { label: '骑手总数', value: stats.total_riders },
+      { label: '空闲骑手', value: stats.idle_riders },
+      { label: '订单总数', value: stats.total_orders },
+      { label: '总营收', value: `¥${this._formatPrice(stats.total_revenue)}` },
+      { label: '总补贴', value: `¥${this._formatPrice(stats.total_subsidy)}` },
+      { label: '平均客单价', value: `¥${this._formatPrice(stats.avg_order_value)}` }
+    ];
+    
+    for (const item of items) {
+      const card = document.createElement('div');
+      card.className = 'stat-card';
+      card.innerHTML = `
+        <div class="stat-value">${item.value}</div>
+        <div class="stat-label">${item.label}</div>
+      `;
+      grid.appendChild(card);
+    }
+    
+    section.appendChild(grid);
+  }
+  
+  renderMessage(text, level = 'info') {
+    const section = this._createSection(level === 'success' ? '操作成功' : level === 'error' ? '操作失败' : '系统消息');
+    
+    const msg = document.createElement('div');
+    msg.className = `log-${level}`;
+    msg.style.padding = '15px';
+    msg.style.borderRadius = '8px';
+    msg.textContent = text;
+    section.appendChild(msg);
+  }
+  
+  renderPromotions(promotions, title = '平台活动') {
+    const section = this._createSection(title);
+    
+    if (promotions.length === 0) {
+      const empty = document.createElement('div');
+      empty.textContent = '暂无活动';
+      empty.style.color = 'var(--text-secondary)';
+      empty.style.padding = '20px';
+      empty.style.textAlign = 'center';
+      section.appendChild(empty);
+      return;
+    }
+    
+    for (const p of promotions) {
+      const card = document.createElement('div');
+      card.className = `promotion-card status-${p.status || 'active'}`;
+      
+      const typeLabels = {
+        fixed_discount: '满减',
+        percentage: '折扣',
+        bonus_credit: '余额奖励',
+        free_delivery: '免配送费'
+      };
+      const targetLabels = {
+        all: '全部用户',
+        new: '新用户',
+        returning: '老用户'
+      };
+      
+      const budgetPct = p.rules?.total_budget ? Math.round(p.budget_used / p.rules.total_budget * 100) : 0;
+      
+      card.innerHTML = `
+        <div class="promotion-header">
+          <div class="promotion-title">${p.title}</div>
+          <span class="promotion-badge">${typeLabels[p.type] || p.type}</span>
+        </div>
+        <div class="promotion-desc">${p.description}</div>
+        <div class="promotion-reward">奖励 ¥${this._formatPrice(p.reward?.amount || 0)}</div>
+        <div class="promotion-rules">
+          <span>目标: ${targetLabels[p.rules?.target_users] || '全部'}</span>
+          <span>门槛: ¥${p.rules?.min_order_amount || 0}</span>
+          <span>预算: ¥${p.budget_used || 0}/${p.rules?.total_budget || 0} (${budgetPct}%)</span>
+          <span>已领: ${p.usage_count || 0}次</span>
+        </div>
+        <div class="promotion-actions">
+          ${p.status === 'active' ? `<button class="btn btn-primary" data-action="apply_promo" data-promo-id="${p.id}">立即参与</button>` : ''}
+          ${p.status === 'active' ? `<button class="btn btn-secondary" data-action="share_promo" data-promo-id="${p.id}">分享</button>` : ''}
+          ${p.status === 'ended' ? '<span style="color:var(--accent-red);font-size:12px;">已结束</span>' : ''}
+          ${p.status === 'paused' ? '<span style="color:var(--text-secondary);font-size:12px;">已暂停</span>' : ''}
+        </div>
+      `;
+      
+      card.querySelectorAll('.promotion-actions .btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const action = e.target.dataset.action;
+          const promoId = e.target.dataset.promoId;
+          this.onAction(action, { promotion_id: promoId, promotion: p });
+        });
+      });
+      
+      section.appendChild(card);
+    }
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Section 11: Test Scenarios
+   ════════════════════════════════════════════════════════════════ */
+function extractOrderId(result) {
+  for (const tr of (result.tool_results || [])) {
+    if (tr.result?.order?.id) return tr.result.order.id;
+  }
+  return null;
+}
+
+function extractRiderId(result) {
+  for (const tr of (result.tool_results || [])) {
+    if (tr.result?.order?.rider_id) return tr.result.order.rider_id;
+  }
+  return null;
+}
+
+function extractPromotionId(result) {
+  for (const tr of (result.tool_results || [])) {
+    if (tr.result?.promotion?.id) return tr.result.promotion.id;
+  }
+  return null;
+}
+
+function extractSubsidyProducts(result) {
+  for (const tr of (result.tool_results || [])) {
+    if (tr.tool === 'set_product_subsidies' && tr.result?.products) return tr.result.products;
+  }
+  return null;
+}
+
+async function scenarioNormal(logger) {
+  logger.panel('📋 场景 1: 正常下单流程');
+  
+  // Step 1: User creates order
+  const user = new UserAgent('user_001', logger);
+  let result = await user.run('请在商家「咖啡A店」(merchant_001) 下单，点 1份美式咖啡 和 1份拿铁。');
+  const orderId = extractOrderId(result);
+  if (!orderId) { logger.error('未能创建订单'); return false; }
+  
+  MessageBus.send(user.agentId, 'merchant_agent_merchant_001', 'order_created', { order_id: orderId });
+  logger.a2a(user.agentId, 'merchant_agent', 'order_created');
+  
+  // Step 2: Pay
+  await user.run(`请支付订单 ${orderId}`);
+  
+  // Step 3: Merchant accepts
+  const merchant = new MerchantAgent('merchant_001', logger);
+  await merchant.run(`你收到了订单 ${orderId}，请接受该订单。`);
+  
+  // Step 4: Platform dispatches
+  const platform = new PlatformAgent(logger);
+  result = await platform.run(`请为订单 ${orderId} 计算最优派单并分配骑手。`);
+  const riderId = extractRiderId(result) || 'rider_001';
+  
+  // Step 5: Rider delivers
+  const rider = new RiderAgent(riderId, logger);
+  await rider.run(`请开始配送并完成订单 ${orderId}（先 start_delivery 再 complete_delivery）。`);
+  
+  // Verify
+  const order = LocalStore.get('orders', orderId);
+  const riderData = LocalStore.get('riders', riderId);
+  
+  const checks = [
+    { desc: '订单状态 = DONE', pass: order?.status === 'DONE' },
+    { desc: '骑手状态 = idle', pass: riderData?.status === 'idle' }
+  ];
+  
+  checks.forEach(c => c.pass ? logger.success(c.desc) : logger.error(c.desc));
+  return checks.every(c => c.pass);
+}
+
+async function scenarioReject(logger) {
+  logger.panel('📋 场景 2: 商户拒单');
+  
+  const user = new UserAgent('user_002', logger);
+  const userBefore = LocalStore.get('users', 'user_002');
+  const balanceBefore = userBefore?.balance || 0;
+  
+  // Create and pay
+  let result = await user.run('请在商家「奶茶A店」(merchant_010) 下单，点 1份珍珠奶茶。');
+  const orderId = extractOrderId(result);
+  if (!orderId) { logger.error('未能创建订单'); return false; }
+  
+  await user.run(`请支付订单 ${orderId}`);
+  
+  // Merchant rejects
+  const merchant = new MerchantAgent('merchant_010', logger);
+  await merchant.run(`订单 ${orderId}，当前原料不足无法制作，请拒绝此订单，拒单原因填写「原料不足」。`);
+  
+  // Verify
+  const order = LocalStore.get('orders', orderId);
+  const userAfter = LocalStore.get('users', 'user_002');
+  
+  const checks = [
+    { desc: '订单状态 = CANCELLED', pass: order?.status === 'CANCELLED' },
+    { desc: '拒单原因非空', pass: !!order?.reject_reason },
+    { desc: '用户余额已退还', pass: userAfter?.balance === balanceBefore }
+  ];
+  
+  checks.forEach(c => c.pass ? logger.success(c.desc) : logger.error(c.desc));
+  return checks.every(c => c.pass);
+}
+
+async function scenarioSubsidy(logger) {
+  logger.panel('📋 场景 3: 补贴流程');
+  
+  // Step 1: Set subsidy
+  const operator = new OperatorAgent(logger);
+  await operator.run('请设置平台补贴：目标为 gmv_growth，每单最高补贴 10 元。');
+  
+  // Step 2: User searches with subsidy
+  const user = new UserAgent('user_003', logger);
+  let result = await user.run('我想点杯咖啡，请帮我搜索一下有什么选择，按补贴从高到低排序。');
+  
+  // Check if subsidy info is returned
+  let hasSubsidy = false;
+  for (const tr of (result.tool_results || [])) {
+    if (tr.result?.products) {
+      hasSubsidy = tr.result.products.some(p => (p.merchant_subsidy || 0) + (p.platform_subsidy || 0) > 0);
+      break;
+    }
+  }
+  
+  // Step 3: Create order with subsidy
+  result = await user.run('请在商家 merchant_001 下单，点 1份美式咖啡。');
+  const orderId = extractOrderId(result);
+  if (!orderId) { logger.error('未能创建订单'); return false; }
+  
+  const order = LocalStore.get('orders', orderId);
+  
+  const checks = [
+    { desc: '搜索结果包含补贴信息', pass: hasSubsidy },
+    { desc: '订单包含补贴金额', pass: (order?.merchant_subsidy || 0) + (order?.platform_subsidy || 0) > 0 },
+    { desc: '实付价格小于原价', pass: order?.final_price < order?.total_price }
+  ];
+  
+  checks.forEach(c => c.pass ? logger.success(c.desc) : logger.error(c.desc));
+  return checks.every(c => c.pass);
+}
+
+async function scenarioDispatch(logger) {
+  logger.panel('📋 场景 4: 智能派单');
+  
+  // Create multiple orders
+  const user1 = new UserAgent('user_004', logger);
+  const user2 = new UserAgent('user_005', logger);
+  
+  const [r1, r2] = await Promise.all([
+    user1.run('请在商家 merchant_001 下单 1份美式咖啡。'),
+    user2.run('请在商家 merchant_020 下单 1份宫保鸡丁。')
+  ]);
+  
+  const oid1 = extractOrderId(r1);
+  const oid2 = extractOrderId(r2);
+  if (!oid1 || !oid2) { logger.error('未能创建订单'); return false; }
+  
+  // Pay and accept
+  await Promise.all([
+    user1.run(`请支付订单 ${oid1}`),
+    user2.run(`请支付订单 ${oid2}`)
+  ]);
+  
+  const m1 = new MerchantAgent('merchant_001', logger);
+  const m2 = new MerchantAgent('merchant_020', logger);
+  await Promise.all([
+    m1.run(`请接受订单 ${oid1}`),
+    m2.run(`请接受订单 ${oid2}`)
+  ]);
+  
+  // Intelligent dispatch
+  const platform = new PlatformAgent(logger);
+  const dispatchResult = await platform.run(`请为订单 ${oid1} 和 ${oid2} 分别计算最优派单并分配骑手。注意使用 calculate_dispatch 获取推荐。`);
+  
+  // Verify
+  const o1 = LocalStore.get('orders', oid1);
+  const o2 = LocalStore.get('orders', oid2);
+  
+  const checks = [
+    { desc: '订单1 已派单', pass: o1?.status === 'DISPATCHED' },
+    { desc: '订单2 已派单', pass: o2?.status === 'DISPATCHED' },
+    { desc: '订单1 骑手报酬已设置', pass: (o1?.rider_payment || 0) > 0 },
+    { desc: '分配了不同骑手', pass: o1?.rider_id !== o2?.rider_id || !o1?.rider_id }
+  ];
+  
+  checks.forEach(c => c.pass ? logger.success(c.desc) : logger.error(c.desc));
+  return checks.every(c => c.pass);
+}
+
+async function scenarioPromotion(logger) {
+  logger.panel('📋 场景 5: 活动推广生命周期');
+  
+  // 记录用户余额
+  const userBefore = LocalStore.get('users', 'user_006');
+  const balanceBefore = userBefore?.balance || 0;
+  
+  // Step 1: Operator creates promotion via LLM
+  const operator = new OperatorAgent(logger);
+  const createResult = await operator.run('请设计并创建一个拉新活动：类型 bonus_credit，标题包含"新人红包"，每人奖励15元，总预算500元，面向全部用户，每人限领1次。请调用 create_promotion 创建。');
+  
+  let promoId = extractPromotionId(createResult);
+  if (!promoId) {
+    // Fallback: check LocalStore for latest promotion
+    const allPromos = LocalStore.all('promotions');
+    if (allPromos.length > 0) {
+      promoId = allPromos[allPromos.length - 1].id;
+    }
+  }
+  if (!promoId) { logger.error('未能创建活动'); return false; }
+  
+  // Step 2: User lists promotions
+  const user = new UserAgent('user_006', logger);
+  await user.run('请查看当前可参与的平台活动。');
+  const activePromos = tool_list_promotions('active');
+  
+  // Step 3: User applies promotion
+  await user.run(`请参与活动 ${promoId}，领取奖励。`);
+  
+  // Verify
+  const userAfter = LocalStore.get('users', 'user_006');
+  const promo = LocalStore.get('promotions', promoId);
+  
+  // A2UI rendering
+  if (promo) {
+    a2uiRenderers.test.renderPromotions([promo], '场景5: 活动推广');
+  }
+  a2uiRenderers.test.renderMessage(
+    `用户余额变化: ¥${balanceBefore} → ¥${userAfter?.balance || balanceBefore}`,
+    userAfter?.balance > balanceBefore ? 'success' : 'info'
+  );
+  
+  const checks = [
+    { desc: '活动已创建', pass: !!promo },
+    { desc: '活动状态正常', pass: promo?.status === 'active' || promo?.status === 'ended' },
+    { desc: '用户余额增加', pass: (userAfter?.balance || 0) > balanceBefore },
+    { desc: '活动预算已消耗', pass: (promo?.budget_used || 0) > 0 },
+    { desc: '活动使用次数 > 0', pass: (promo?.usage_count || 0) > 0 }
+  ];
+  
+  checks.forEach(c => c.pass ? logger.success(c.desc) : logger.error(c.desc));
+  return checks.every(c => c.pass);
+}
+
+async function scenarioLLMSubsidy(logger) {
+  logger.panel('📋 场景 6: LLM动态补贴定价');
+  
+  // Step 1: Operator sets platform subsidy
+  const operator = new OperatorAgent(logger);
+  await operator.run('请设置平台补贴：目标为 gmv_growth，每单最高补贴 8 元。');
+  
+  // Step 2: User triggers 3-step LLM pricing pipeline
+  const user = new UserAgent('user_007', logger);
+  const result = await user.run('我想搜索咖啡类商品，请帮我找找有什么推荐。请依次执行3步管道：先search_products搜索，再get_subsidy_context获取上下文，最后set_product_subsidies设置补贴和排序。');
+  
+  // Step 3: Extract and verify
+  let subsidyProducts = extractSubsidyProducts(result);
+  
+  // Fallback: check subsidy_cache
+  if (!subsidyProducts) {
+    const cache = LocalStore._read('subsidy_cache');
+    if (cache?.products?.length > 0) {
+      subsidyProducts = cache.products;
+    }
+  }
+  
+  // A2UI rendering
+  if (subsidyProducts && subsidyProducts.length > 0) {
+    a2uiRenderers.test.renderProducts(subsidyProducts.slice(0, 6), '场景6: LLM动态定价结果');
+  } else {
+    a2uiRenderers.test.renderMessage('LLM未完成3步定价管道', 'error');
+  }
+  
+  const hasSubsidy = subsidyProducts?.some(p => (p.platform_subsidy || 0) + (p.merchant_subsidy || 0) > 0) || false;
+  const hasSortScore = subsidyProducts?.some(p => (p.sort_score || 0) > 0) || false;
+  const hasReason = subsidyProducts?.some(p => !!p.reason) || false;
+  
+  const checks = [
+    { desc: 'LLM管道返回商品', pass: subsidyProducts && subsidyProducts.length > 0 },
+    { desc: '补贴缓存已更新', pass: (LocalStore._read('subsidy_cache')?.products?.length || 0) > 0 },
+    { desc: '至少一个商品有补贴', pass: hasSubsidy },
+    { desc: '商品有排序分数', pass: hasSortScore },
+    { desc: '商品有定价理由', pass: hasReason }
+  ];
+  
+  checks.forEach(c => c.pass ? logger.success(c.desc) : logger.error(c.desc));
+  return checks.every(c => c.pass);
+}
+
+async function scenarioAutoDispatch(logger) {
+  logger.panel('📋 场景 7: 接单自动触发派单');
+  
+  // Step 1: Create and pay order
+  const user = new UserAgent('user_008', logger);
+  let result = await user.run('请在商家「咖啡A店」(merchant_001) 下单，点 1份美式咖啡。');
+  const orderId = extractOrderId(result);
+  if (!orderId) { logger.error('未能创建订单'); return false; }
+  
+  await user.run(`请支付订单 ${orderId}`);
+  
+  const orderAfterPay = LocalStore.get('orders', orderId);
+  if (orderAfterPay?.status !== 'PAID') {
+    logger.error(`支付后状态异常: ${orderAfterPay?.status}`);
+    return false;
+  }
+  
+  // Step 2: Merchant accepts
+  const merchant = new MerchantAgent('merchant_001', logger);
+  await merchant.run(`请接受订单 ${orderId}。`);
+  
+  const orderAfterAccept = LocalStore.get('orders', orderId);
+  if (orderAfterAccept?.status !== 'ACCEPTED') {
+    logger.error(`接单后状态异常: ${orderAfterAccept?.status}`);
+    return false;
+  }
+  logger.success('中间态: 接单成功 → ACCEPTED');
+  
+  // Step 3: Auto LLM dispatch
+  const config = tool_get_config();
+  const stats = tool_get_platform_stats();
+  const platformAgent = new PlatformAgent(logger);
+  await platformAgent.run(`请为订单 ${orderId} 计算最优派单并分配骑手。
+平台目标: ${config.goal || 'balanced'}
+约束条件: ${config.constraint || '无'}
+调度策略: ${JSON.stringify(config.strategies || ['fair_dispatch'])}
+派单配置: 目标=${config.dispatch_config?.goal || 'balanced'}，最大并发=${config.dispatch_config?.max_concurrent_per_rider || 3}
+当前空闲骑手: ${stats.idle_riders}/${stats.total_riders}
+请先 calculate_dispatch 再 dispatch_order。`);
+  
+  // Verify
+  const finalOrder = LocalStore.get('orders', orderId);
+  const rider = finalOrder?.rider_id ? LocalStore.get('riders', finalOrder.rider_id) : null;
+  
+  // A2UI rendering
+  if (finalOrder) {
+    a2uiRenderers.test.renderOrders([finalOrder], '场景7: 自动派单结果');
+  }
+  if (rider) {
+    a2uiRenderers.test.renderMessage(
+      `智能调度: ${rider.name} (⭐${rider.stats?.rating?.toFixed(1) || '5.0'})，报酬 ¥${finalOrder.rider_payment || 0}`,
+      'success'
+    );
+  }
+  
+  const checks = [
+    { desc: '最终状态 = DISPATCHED', pass: finalOrder?.status === 'DISPATCHED' },
+    { desc: '骑手已分配', pass: !!finalOrder?.rider_id },
+    { desc: '骑手报酬已设置', pass: (finalOrder?.rider_payment || 0) > 0 }
+  ];
+  
+  checks.forEach(c => c.pass ? logger.success(c.desc) : logger.error(c.desc));
+  return checks.every(c => c.pass);
+}
+
+const SCENARIOS = {
+  normal: { name: '正常下单流程', fn: scenarioNormal },
+  reject: { name: '商户拒单', fn: scenarioReject },
+  subsidy: { name: '补贴流程', fn: scenarioSubsidy },
+  dispatch: { name: '智能派单', fn: scenarioDispatch },
+  promotion: { name: '活动推广', fn: scenarioPromotion },
+  llm_subsidy: { name: 'LLM动态定价', fn: scenarioLLMSubsidy },
+  auto_dispatch: { name: '接单自动派单', fn: scenarioAutoDispatch }
+};
+
+/* ════════════════════════════════════════════════════════════════
+   Section 12: UI Controller
+   ════════════════════════════════════════════════════════════════ */
+let loggers = {};
+let a2uiRenderers = {};
+let currentTab = 'user';
+
+function initUI() {
+  // Initialize loggers
+  loggers = {
+    test: new Logger('log-test'),
+    user: new Logger('log-user'),
+    merchant: new Logger('log-merchant'),
+    rider: new Logger('log-rider'),
+    operator: new Logger('log-operator')
+  };
+  
+  // Initialize A2UI renderers
+  a2uiRenderers = {
+    user: new A2UIRenderer('a2ui-user', handleUserA2UIAction),
+    merchant: new A2UIRenderer('a2ui-merchant', handleMerchantA2UIAction),
+    rider: new A2UIRenderer('a2ui-rider'),
+    operator: new A2UIRenderer('a2ui-operator', handleOperatorA2UIAction),
+    test: new A2UIRenderer('a2ui-test')
+  };
+  
+  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      const tabId = btn.dataset.tab;
+      document.getElementById(`tab-${tabId}`).classList.add('active');
+      currentTab = tabId;
+      if (tabId === 'data') refreshData();
+      if (tabId === 'tools') renderToolsList();
+      if (tabId === 'operator') updateStats();
+    });
+  });
+  
+  // Populate selects
+  populateSelects();
+  
+  // Load config
+  loadConfig();
+  
+  // Initialize data if needed
+  if (LocalStore.all('merchants').length === 0) {
+    initializeData();
+  }
+  
+  // 添加回车键发送监听
+  document.getElementById('user-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      userFreeInput();
+    }
+  });
+  document.getElementById('operator-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      operatorFreeInput();
+    }
+  });
+  
+  // Initial data view
+  refreshData();
+}
+
+// Searchable select data storage
+const selectData = {
+  user: [],
+  merchant: [],
+  rider: []
+};
+
+function populateSelects() {
+  // Load ALL data (not sliced)
+  selectData.user = LocalStore.all('users');
+  selectData.merchant = LocalStore.all('merchants');
+  selectData.rider = LocalStore.all('riders');
+  
+  // Initialize each searchable select
+  initSearchableSelect('user', selectData.user, u => `${u.name} (余额: ¥${u.balance})`, u => u.id);
+  initSearchableSelect('merchant', selectData.merchant, m => `${m.emoji} ${m.name} [${m.category}]`, m => m.id);
+  initSearchableSelect('rider', selectData.rider, r => `${r.name} (${r.status}) ⭐${r.stats?.rating?.toFixed(1) || '5.0'}`, r => r.id);
+}
+
+function initSearchableSelect(type, data, labelFn, valueFn) {
+  const input = document.getElementById(`${type}-select-input`);
+  const hidden = document.getElementById(`${type}-select`);
+  const dropdown = document.getElementById(`${type}-select-dropdown`);
+  
+  // Set first item as default
+  if (data.length > 0) {
+    hidden.value = valueFn(data[0]);
+    input.value = labelFn(data[0]);
+  }
+  
+  // Render dropdown
+  renderDropdown(type, data, labelFn, valueFn);
+}
+
+function renderDropdown(type, data, labelFn, valueFn, filter = '') {
+  const dropdown = document.getElementById(`${type}-select-dropdown`);
+  const hidden = document.getElementById(`${type}-select`);
+  
+  // Filter data
+  let filtered = data;
+  if (filter) {
+    const lowerFilter = filter.toLowerCase();
+    filtered = data.filter(item => {
+      const label = labelFn(item).toLowerCase();
+      const id = valueFn(item).toLowerCase();
+      return label.includes(lowerFilter) || id.includes(lowerFilter);
+    });
+  }
+  
+  // Render
+  let html = `<div class="dropdown-count">共 ${filtered.length} / ${data.length} 项</div>`;
+  html += filtered.map(item => {
+    const value = valueFn(item);
+    const label = labelFn(item);
+    const selected = hidden.value === value ? 'selected' : '';
+    return `<div class="dropdown-item ${selected}" data-value="${value}" onclick="selectItem('${type}', '${value}', '${label.replace(/'/g, "\\'")}')">
+      ${label}
+      <div class="item-id">${value}</div>
+    </div>`;
+  }).join('');
+  
+  dropdown.innerHTML = html;
+}
+
+function toggleDropdown(type) {
+  const wrapper = document.getElementById(`${type}-select-wrapper`);
+  
+  // Close other dropdowns
+  document.querySelectorAll('.searchable-select.open').forEach(el => {
+    if (el.id !== `${type}-select-wrapper`) {
+      el.classList.remove('open');
+    }
+  });
+  
+  wrapper.classList.toggle('open');
+  
+  // Re-render with current data
+  if (wrapper.classList.contains('open')) {
+    const data = selectData[type];
+    const labelFn = type === 'user' ? u => `${u.name} (余额: ¥${u.balance})` :
+                    type === 'merchant' ? m => `${m.emoji} ${m.name} [${m.category}]` :
+                    r => `${r.name} (${r.status}) ⭐${r.stats?.rating?.toFixed(1) || '5.0'}`;
+    const valueFn = item => item.id;
+    renderDropdown(type, data, labelFn, valueFn);
+  }
+}
+
+function filterSelect(type) {
+  const input = document.getElementById(`${type}-select-input`);
+  const filter = input.value;
+  const data = selectData[type];
+  
+  const labelFn = type === 'user' ? u => `${u.name} (余额: ¥${u.balance})` :
+                  type === 'merchant' ? m => `${m.emoji} ${m.name} [${m.category}]` :
+                  r => `${r.name} (${r.status}) ⭐${r.stats?.rating?.toFixed(1) || '5.0'}`;
+  const valueFn = item => item.id;
+  
+  renderDropdown(type, data, labelFn, valueFn, filter);
+  
+  // Keep dropdown open while typing
+  const wrapper = document.getElementById(`${type}-select-wrapper`);
+  if (!wrapper.classList.contains('open')) {
+    wrapper.classList.add('open');
+  }
+}
+
+function selectItem(type, value, label) {
+  const input = document.getElementById(`${type}-select-input`);
+  const hidden = document.getElementById(`${type}-select`);
+  const wrapper = document.getElementById(`${type}-select-wrapper`);
+  
+  hidden.value = value;
+  input.value = label;
+  wrapper.classList.remove('open');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.searchable-select')) {
+    document.querySelectorAll('.searchable-select.open').forEach(el => {
+      el.classList.remove('open');
+    });
+  }
+});
+
+function updateConfigStatus() {
+  const config = getLLMConfig();
+  const el = document.getElementById('config-status');
+  if (!config.url || !config.model || !config.key) {
+    const missing = [];
+    if (!config.url) missing.push('URL');
+    if (!config.model) missing.push('模型');
+    if (!config.key) missing.push('Key');
+    el.textContent = `LLM: 未配置（缺少${missing.join('、')}）`;
+    el.style.color = '#ff6b6b';
+  } else {
+    el.textContent = 'LLM: 已配置';
+    el.style.color = '';
+  }
+}
+
+function loadConfig() {
+  const config = getLLMConfig();
+  document.getElementById('cfg-url').value = config.url;
+  document.getElementById('cfg-model').value = config.model;
+  document.getElementById('cfg-key').value = config.key;
+  updateConfigStatus();
+}
+
+function toggleConfig() {
+  const panel = document.getElementById('config-panel');
+  const btn = document.getElementById('config-toggle');
+  panel.classList.toggle('show');
+  btn.textContent = panel.classList.contains('show') ? '收起配置' : '展开配置';
+}
+
+function saveConfig() {
+  const config = {
+    url: document.getElementById('cfg-url').value,
+    model: document.getElementById('cfg-model').value,
+    key: document.getElementById('cfg-key').value
+  };
+  localStorage.setItem('takeout_llm_config', JSON.stringify(config));
+  updateConfigStatus();
+  toggleConfig();
+  alert('配置已保存');
+}
+
+// Test functions
+async function runAllScenarios() {
+  const logger = loggers.test;
+  logger.clear();
+  a2uiRenderers.test?.clear();
+  
+  const resultsDiv = document.getElementById('test-results');
+  resultsDiv.innerHTML = '';
+  
+  const results = {};
+  
+  for (const [key, scenario] of Object.entries(SCENARIOS)) {
+    try {
+      results[key] = await scenario.fn(logger);
+    } catch (e) {
+      logger.error(`场景 ${key} 异常: ${e.message}`);
+      results[key] = false;
+    }
+  }
+  
+  // Show summary
+  logger.panel('📊 测试摘要');
+  let html = '';
+  for (const [key, passed] of Object.entries(results)) {
+    const scenario = SCENARIOS[key];
+    html += `
+      <div class="test-item">
+        <span class="test-icon">${passed ? '✅' : '❌'}</span>
+        <span class="test-name">${scenario.name}</span>
+        <span class="test-status ${passed ? 'test-pass' : 'test-fail'}">${passed ? '通过' : '失败'}</span>
+      </div>
+    `;
+  }
+  resultsDiv.innerHTML = html;
+  
+  const total = Object.keys(results).length;
+  const passed = Object.values(results).filter(v => v).length;
+  logger.info(`总计: ${passed}/${total} 通过`);
+}
+
+async function runScenario(name) {
+  const logger = loggers.test;
+  logger.clear();
+  a2uiRenderers.test?.clear();
+  
+  const resultsDiv = document.getElementById('test-results');
+  resultsDiv.innerHTML = '';
+  
+  try {
+    const passed = await SCENARIOS[name].fn(logger);
+    resultsDiv.innerHTML = `
+      <div class="test-item">
+        <span class="test-icon">${passed ? '✅' : '❌'}</span>
+        <span class="test-name">${SCENARIOS[name].name}</span>
+        <span class="test-status ${passed ? 'test-pass' : 'test-fail'}">${passed ? '通过' : '失败'}</span>
+      </div>
+    `;
+  } catch (e) {
+    logger.error(`场景异常: ${e.message}`);
+    resultsDiv.innerHTML = `
+      <div class="test-item">
+        <span class="test-icon">❌</span>
+        <span class="test-name">${SCENARIOS[name].name}</span>
+        <span class="test-status test-fail">异常</span>
+      </div>
+    `;
+  }
+}
+
+// Merchant A2UI actions
+async function handleMerchantA2UIAction(action, data) {
+  const logger = loggers.merchant;
+  const merchantId = document.getElementById('merchant-select').value;
+  const agent = new MerchantAgent(merchantId, logger);
+  
+  a2uiRenderers.merchant.showLoading('正在处理...');
+  try {
+    if (action === 'pay') {
+      // 商户视角不能支付，但可以提示
+      a2uiRenderers.merchant.renderMessage('支付操作需在用户端完成', 'info');
+    } else if (action === 'cancel') {
+      await agent.run(`请拒绝订单 ${data.order_id}，原因：商户操作取消。`);
+      const order = LocalStore.get('orders', data.order_id);
+      if (order) a2uiRenderers.merchant.renderOrders([order], '已取消');
+    }
+  } catch (e) {
+    a2uiRenderers.merchant.hideLoading();
+    a2uiRenderers.merchant.renderMessage(`操作失败: ${e.message}`, 'error');
+  }
+}
+
+// Operator A2UI actions
+async function handleOperatorA2UIAction(action, data) {
+  const logger = loggers.operator;
+  
+  if (action === 'apply_promo') {
+    a2uiRenderers.operator.renderMessage('运营视角无需参与活动，请在用户视角测试', 'info');
+  } else if (action === 'share_promo') {
+    a2uiRenderers.operator.renderMessage(`活动 ${data.promotion_id} 分享链接已复制`, 'success');
+  }
+}
+
+// User actions
+async function handleUserA2UIAction(action, data) {
+  const logger = loggers.user;
+  const userId = document.getElementById('user-select').value;
+  const agent = new UserAgent(userId, logger);
+  
+  // 显示loading
+  a2uiRenderers.user.showLoading('正在处理...');
+  
+  try {
+    if (action === 'order') {
+      const result = await agent.run(`请在商家 ${data.merchant_id} 下单，点 1份${data.name}。`);
+      const orderId = extractOrderId(result);
+      if (orderId) {
+        const order = LocalStore.get('orders', orderId);
+        if (order) {
+          a2uiRenderers.user.renderOrders([order], '订单已创建');
+        }
+      }
+    } else if (action === 'pay') {
+      await agent.run(`请支付订单 ${data.order_id}。`);
+      const order = LocalStore.get('orders', data.order_id);
+      if (order) {
+        a2uiRenderers.user.renderOrders([order], '支付成功');
+      }
+    } else if (action === 'cancel') {
+      await agent.run(`请取消订单 ${data.order_id}。`);
+      const order = LocalStore.get('orders', data.order_id);
+      if (order) {
+        a2uiRenderers.user.renderOrders([order], '订单已取消');
+      }
+    } else if (action === 'reorder') {
+      const order = data.order;
+      if (order) {
+        const itemNames = order.items.map(i => `${i.quantity}份${i.name}`).join('、');
+        const result = await agent.run(`请在商家 ${order.merchant_id} 下单，点 ${itemNames}。`);
+        const orderId = extractOrderId(result);
+        if (orderId) {
+          const newOrder = LocalStore.get('orders', orderId);
+          if (newOrder) {
+            a2uiRenderers.user.renderOrders([newOrder], '新订单已创建');
+          }
+        }
+      }
+    } else if (action === 'urge') {
+      a2uiRenderers.user.renderMessage(`已发送催单提醒给商家`, 'info');
+    } else if (action === 'contact_rider') {
+      const order = LocalStore.get('orders', data.order_id);
+      const rider = order?.rider_id ? LocalStore.get('riders', order.rider_id) : null;
+      a2uiRenderers.user.renderMessage(`骑手: ${rider?.name || '未分配'} - 请稍候配送`, 'info');
+    } else if (action === 'rate') {
+      a2uiRenderers.user.renderMessage(`感谢您的评价！`, 'success');
+    } else if (action === 'apply_promo') {
+      const userId = document.getElementById('user-select').value;
+      const result = tool_apply_promotion(data.promotion_id, userId);
+      if (result.error) {
+        a2uiRenderers.user.renderMessage(result.error, 'error');
+      } else {
+        a2uiRenderers.user.renderMessage(result.message, 'success');
+      }
+    }
+  } catch (e) {
+    a2uiRenderers.user.hideLoading();
+    a2uiRenderers.user.renderMessage(`操作失败: ${e.message}`, 'error');
+  }
+}
+
+async function userAction(action) {
+  const logger = loggers.user;
+  const userId = document.getElementById('user-select').value;
+  const agent = new UserAgent(userId, logger);
+  
+  logger.clear();
+  a2uiRenderers.user.showLoading('正在加载...');
+  
+  try {
+    if (action === 'browse') {
+      await agent.run('请列出所有商家。');
+      // Show merchants in A2UI
+      const merchants = LocalStore.all('merchants').slice(0, 12);
+      const products = [];
+      for (const m of merchants) {
+        const p = m.menu[0];
+        if (p) {
+          const subsidy = calculateProductSubsidy(m, p);
+          products.push({
+            product_id: p.id,
+            name: p.name,
+            merchant_id: m.id,
+            merchant_name: m.name,
+            merchant_emoji: m.emoji,
+            original_price: p.price,
+            merchant_subsidy: subsidy.merchant,
+            platform_subsidy: subsidy.platform,
+            final_price: p.price - subsidy.merchant - subsidy.platform
+          });
+        }
+      }
+      a2uiRenderers.user.renderProducts(products, '热门商家推荐');
+    } else if (action === 'orders') {
+      await agent.run('请列出我的所有订单。');
+      const orders = LocalStore.query('orders', { user_id: userId });
+      a2uiRenderers.user.renderOrders(orders.slice(0, 10), '我的订单');
+    } else if (action === 'promotions') {
+      await agent.run('请查看当前可参与的平台活动。');
+      const promos = tool_list_promotions('active');
+      a2uiRenderers.user.renderPromotions(promos.promotions || [], '平台活动');
+    }
+  } catch (e) {
+    a2uiRenderers.user.hideLoading();
+    a2uiRenderers.user.renderMessage(`操作失败: ${e.message}`, 'error');
+  }
+}
+
+async function userFreeInput() {
+  const logger = loggers.user;
+  const userId = document.getElementById('user-select').value;
+  const input = document.getElementById('user-input').value.trim();
+  if (!input) return;
+  
+  logger.clear();
+  a2uiRenderers.user.showLoading('AI正在思考...');
+  
+  try {
+    const agent = new UserAgent(userId, logger);
+    const result = await agent.run(input);
+    
+    // Check tool results - prioritize set_product_subsidies (LLM dynamic pricing)
+    let rendered = false;
+    for (const tr of (result.tool_results || [])) {
+      if (tr.tool === 'set_product_subsidies' && tr.result?.products) {
+        a2uiRenderers.user.renderProducts(tr.result.products.slice(0, 12), 'LLM智能定价推荐');
+        rendered = true;
+        break;
+      }
+    }
+    if (!rendered) {
+      for (const tr of (result.tool_results || [])) {
+        if (tr.tool === 'search_products' && tr.result?.products) {
+          a2uiRenderers.user.renderProducts(tr.result.products.slice(0, 8), '搜索结果');
+          rendered = true;
+          break;
+        } else if (tr.tool === 'list_orders' && tr.result?.orders) {
+          a2uiRenderers.user.renderOrders(tr.result.orders.slice(0, 10), '订单列表');
+          rendered = true;
+          break;
+        } else if (tr.tool === 'create_order' && tr.result?.order) {
+          a2uiRenderers.user.renderOrders([tr.result.order], '订单已创建');
+          rendered = true;
+          break;
+        } else if (tr.tool === 'list_promotions' && tr.result?.promotions) {
+          a2uiRenderers.user.renderPromotions(tr.result.promotions, '平台活动');
+          rendered = true;
+          break;
+        } else if (tr.tool === 'apply_promotion' && tr.result) {
+          a2uiRenderers.user.renderMessage(tr.result.message || tr.result.error, tr.result.success ? 'success' : 'error');
+          rendered = true;
+          break;
+        }
+      }
+    }
+    if (!rendered && result.response) {
+      a2uiRenderers.user.renderMessage(result.response, 'info');
+    }
+  } catch (e) {
+    a2uiRenderers.user.hideLoading();
+    a2uiRenderers.user.renderMessage(`请求失败: ${e.message}`, 'error');
+  }
+  
+  document.getElementById('user-input').value = '';
+}
+
+// Merchant actions
+async function merchantAction(action) {
+  const logger = loggers.merchant;
+  const merchantId = document.getElementById('merchant-select').value;
+  const agent = new MerchantAgent(merchantId, logger);
+  
+  logger.clear();
+  a2uiRenderers.merchant.showLoading('正在处理...');
+  
+  try {
+    if (action === 'pending') {
+      await agent.run('请列出所有待处理（PAID状态）的订单。');
+      const orders = LocalStore.query('orders', { merchant_id: merchantId, status: 'PAID' });
+      a2uiRenderers.merchant.renderOrders(orders, '待处理订单');
+    } else if (action === 'all_orders') {
+      await agent.run('请列出该商户的所有订单。');
+      const orders = LocalStore.query('orders', { merchant_id: merchantId });
+      a2uiRenderers.merchant.renderOrders(orders, '所有订单');
+    } else if (action === 'accept') {
+      const orders = LocalStore.query('orders', { merchant_id: merchantId, status: 'PAID' });
+      if (orders.length > 0) {
+        const orderId = orders[0].id;
+        await agent.run(`请接受订单 ${orderId}。`);
+        const updatedOrder = LocalStore.get('orders', orderId);
+        if (updatedOrder && updatedOrder.status === 'ACCEPTED') {
+          a2uiRenderers.merchant.renderOrders([updatedOrder], '已接单');
+          
+          // Auto LLM dispatch - 自动触发平台智能派单
+          a2uiRenderers.merchant.showLoading('正在自动调度骑手...');
+          try {
+            const config = tool_get_config();
+            const stats = tool_get_platform_stats();
+            const dispatchPrompt = `请为订单 ${orderId} 计算最优派单并分配骑手。
+
+【平台调度上下文】
+平台目标: ${config.goal || 'balanced'}
+约束条件: ${config.constraint || '无'}
+调度策略: ${JSON.stringify(config.strategies || ['fair_dispatch'])}
+派单配置: 目标=${config.dispatch_config?.goal || 'balanced'}，最大并发=${config.dispatch_config?.max_concurrent_per_rider || 3}，最远距离=${config.dispatch_config?.max_distance_km || 5}km
+当前空闲骑手: ${stats.idle_riders}/${stats.total_riders}
+订单总量: ${stats.total_orders}
+
+【调度要求】
+1. 先调用 calculate_dispatch 计算最优骑手匹配
+2. 综合考虑距离、骑手评分、当前负载、平台目标进行决策
+3. 选定骑手后调用 dispatch_order 完成派单
+4. 如果平台目标是 cost_first 优先选报价低的骑手
+5. 如果平台目标是 time_first 优先选距离近、配送快的骑手`;
+            
+            const platformAgent = new PlatformAgent(loggers.merchant);
+            const dispatchResult = await platformAgent.run(dispatchPrompt);
+            
+            // 渲染派单结果
+            const dispatchedOrder = LocalStore.get('orders', orderId);
+            if (dispatchedOrder && dispatchedOrder.status === 'DISPATCHED') {
+              const rider = LocalStore.get('riders', dispatchedOrder.rider_id);
+              a2uiRenderers.merchant.renderOrders([dispatchedOrder], '已自动派单');
+              a2uiRenderers.merchant.renderMessage(
+                `智能调度完成: 骑手 ${rider?.name || dispatchedOrder.rider_id}，预计报酬 ¥${dispatchedOrder.rider_payment || 0}`,
+                'success'
+              );
+            } else {
+              a2uiRenderers.merchant.renderMessage('自动派单未成功，请手动派单', 'info');
+            }
+          } catch (dispatchErr) {
+            a2uiRenderers.merchant.hideLoading();
+            a2uiRenderers.merchant.renderMessage(`自动派单异常: ${dispatchErr.message}`, 'error');
+          }
+        } else if (updatedOrder) {
+          a2uiRenderers.merchant.renderOrders([updatedOrder], '接单结果');
+        }
+      } else {
+        a2uiRenderers.merchant.hideLoading();
+        a2uiRenderers.merchant.renderMessage('没有待处理订单', 'info');
+      }
+    } else if (action === 'reject') {
+      const orders = LocalStore.query('orders', { merchant_id: merchantId, status: 'PAID' });
+      if (orders.length > 0) {
+        await agent.run(`请拒绝订单 ${orders[0].id}，原因：库存不足。`);
+        const updatedOrder = LocalStore.get('orders', orders[0].id);
+        if (updatedOrder) {
+          a2uiRenderers.merchant.renderOrders([updatedOrder], '已拒单');
+        }
+      } else {
+        a2uiRenderers.merchant.hideLoading();
+        a2uiRenderers.merchant.renderMessage('没有待处理订单', 'info');
+      }
+    }
+  } catch (e) {
+    a2uiRenderers.merchant.hideLoading();
+    a2uiRenderers.merchant.renderMessage(`操作失败: ${e.message}`, 'error');
+  }
+}
+
+function merchantSetSubsidy() {
+  const merchantId = document.getElementById('merchant-select').value;
+  const config = {
+    enabled: true,
+    goal: document.getElementById('merchant-subsidy-goal').value,
+    max_subsidy_rate: parseFloat(document.getElementById('merchant-subsidy-rate').value),
+    daily_budget: parseInt(document.getElementById('merchant-subsidy-budget').value)
+  };
+  
+  const result = tool_set_merchant_subsidy(merchantId, config);
+  alert(result.message || result.error);
+}
+
+// Rider actions
+async function riderAction(action) {
+  const logger = loggers.rider;
+  const riderId = document.getElementById('rider-select').value;
+  const agent = new RiderAgent(riderId, logger);
+  
+  logger.clear();
+  
+  if (action === 'myorders') {
+    const rider = LocalStore.get('riders', riderId);
+    const orderIds = rider?.current_orders || [];
+    const orders = orderIds.map(id => LocalStore.get('orders', id)).filter(Boolean);
+    a2uiRenderers.rider.renderOrders(orders, '我的配送订单');
+    if (orders.length === 0) {
+      // Show DISPATCHED orders assigned to this rider
+      const dispatched = LocalStore.all('orders').filter(o => o.rider_id === riderId && o.status === 'DISPATCHED');
+      a2uiRenderers.rider.renderOrders(dispatched, '待配送订单');
+    }
+  } else if (action === 'start') {
+    const orders = LocalStore.all('orders').filter(o => o.rider_id === riderId && o.status === 'DISPATCHED');
+    if (orders.length > 0) {
+      await agent.run(`请开始配送订单 ${orders[0].id}。`);
+    } else {
+      logger.info('没有待配送订单');
+    }
+  } else if (action === 'complete') {
+    const orders = LocalStore.all('orders').filter(o => o.rider_id === riderId && o.status === 'DELIVERING');
+    if (orders.length > 0) {
+      await agent.run(`请完成配送订单 ${orders[0].id}。`);
+    } else {
+      logger.info('没有配送中订单');
+    }
+  }
+}
+
+// Operator actions
+async function operatorAction(action) {
+  const logger = loggers.operator;
+  const agent = new OperatorAgent(logger);
+  
+  logger.clear();
+  a2uiRenderers.operator.showLoading('正在处理...');
+  
+  try {
+    if (action === 'stats') {
+      await agent.run('请查看平台统计数据。');
+      updateStats();
+    } else if (action === 'config') {
+      await agent.run('请查看当前平台策略配置。');
+    } else if (action === 'design_promotion') {
+      const stats = tool_get_platform_stats();
+      const config = tool_get_config();
+      await agent.run(`请根据当前平台数据设计一个运营活动。
+当前数据：订单总数 ${stats.total_orders}，总营收 ¥${stats.total_revenue}，用户数 ${stats.total_users}。
+平台目标：${config.platform_subsidy?.goal || 'gmv_growth'}。
+请先查看平台统计了解详情，然后设计一个有吸引力的活动并创建。`);
+      // 渲染最新的活动
+      const promos = tool_list_promotions();
+      if (promos.promotions.length > 0) {
+        a2uiRenderers.operator.renderPromotions([promos.promotions[promos.promotions.length - 1]], '新创建的活动');
+      }
+    } else if (action === 'list_promotions') {
+      await agent.run('请列出所有运营活动。');
+      const promos = tool_list_promotions();
+      a2uiRenderers.operator.renderPromotions(promos.promotions || [], '活动列表');
+    }
+  } catch (e) {
+    a2uiRenderers.operator.hideLoading();
+    a2uiRenderers.operator.renderMessage(`操作失败: ${e.message}`, 'error');
+  }
+}
+
+async function operatorFreeInput() {
+  const logger = loggers.operator;
+  const input = document.getElementById('operator-input').value.trim();
+  if (!input) return;
+  
+  logger.clear();
+  a2uiRenderers.operator.showLoading('AI正在思考...');
+  
+  try {
+    const agent = new OperatorAgent(logger);
+    const result = await agent.run(input);
+    
+    // 检查工具调用结果并渲染
+    for (const tr of (result.tool_results || [])) {
+      if (tr.tool === 'create_promotion' && tr.result?.promotion) {
+        a2uiRenderers.operator.renderPromotions([tr.result.promotion], '活动已创建');
+        break;
+      } else if (tr.tool === 'list_promotions' && tr.result?.promotions) {
+        a2uiRenderers.operator.renderPromotions(tr.result.promotions, '活动列表');
+        break;
+      } else if (tr.tool === 'get_platform_stats' && tr.result) {
+        a2uiRenderers.operator.renderStats(tr.result);
+        break;
+      }
+    }
+  } catch (e) {
+    a2uiRenderers.operator.hideLoading();
+    a2uiRenderers.operator.renderMessage(`请求失败: ${e.message}`, 'error');
+  }
+  
+  document.getElementById('operator-input').value = '';
+}
+
+function operatorSetSubsidy() {
+  const config = {
+    enabled: true,
+    goal: document.getElementById('platform-subsidy-goal').value,
+    budget_per_order: parseInt(document.getElementById('platform-subsidy-limit').value)
+  };
+  
+  const result = tool_set_platform_subsidy(config);
+  alert(result.message || result.error);
+}
+
+function operatorSetDispatch() {
+  const goal = document.getElementById('dispatch-goal').value;
+  const cfg = tool_get_config();
+  cfg.dispatch_config = { ...cfg.dispatch_config, goal };
+  tool_update_config(cfg);
+  alert('派单策略已更新');
+}
+
+function updateStats() {
+  const stats = tool_get_platform_stats();
+  const grid = document.getElementById('stats-grid');
+  
+  const items = [
+    { label: '商家总数', value: stats.total_merchants },
+    { label: '用户总数', value: stats.total_users },
+    { label: '骑手总数', value: stats.total_riders },
+    { label: '空闲骑手', value: stats.idle_riders },
+    { label: '订单总数', value: stats.total_orders },
+    { label: '总营收', value: `¥${stats.total_revenue}` },
+    { label: '总补贴', value: `¥${stats.total_subsidy}` },
+    { label: '平均客单价', value: `¥${stats.avg_order_value}` }
+  ];
+  
+  grid.innerHTML = items.map(item => `
+    <div class="stat-card">
+      <div class="stat-value">${item.value}</div>
+      <div class="stat-label">${item.label}</div>
+    </div>
+  `).join('');
+}
+
+// Data view
+let currentDataTab = 'merchants';
+
+function refreshData() {
+  const tabs = ['merchants', 'products', 'users', 'riders', 'orders', 'promotions', 'config'];
+  const tabsContainer = document.getElementById('data-tabs');
+  
+  tabsContainer.innerHTML = tabs.map(t => `
+    <button class="data-tab ${t === currentDataTab ? 'active' : ''}" onclick="showDataTab('${t}')">${t}</button>
+  `).join('');
+  
+  showDataTab(currentDataTab);
+}
+
+function showDataTab(tab) {
+  currentDataTab = tab;
+  document.querySelectorAll('.data-tab').forEach(t => t.classList.toggle('active', t.textContent === tab));
+  
+  let data;
+  if (tab === 'config') {
+    data = [LocalStore._read('config')];
+  } else if (tab === 'products') {
+    data = [];
+    for (const m of LocalStore.all('merchants')) {
+      for (const p of (m.menu || [])) {
+        data.push({
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          category: p.category,
+          merchant_id: m.id,
+          merchant_name: m.name,
+          merchant_category: m.category
+        });
+      }
+    }
+  } else {
+    data = LocalStore.all(tab);
+  }
+  
+  document.getElementById('data-count').textContent = `共 ${data.length} 条记录`;
+  
+  const thead = document.getElementById('data-thead');
+  const tbody = document.getElementById('data-tbody');
+  
+  if (data.length === 0) {
+    thead.innerHTML = '';
+    tbody.innerHTML = '<tr><td>暂无数据</td></tr>';
+    return;
+  }
+  
+  // Get columns (limited for readability)
+  let columns = Object.keys(data[0]);
+  if (tab === 'merchants') columns = ['id', 'name', 'category', 'emoji', 'address'];
+  if (tab === 'products') columns = ['id', 'name', 'price', 'category', 'merchant_id', 'merchant_name', 'merchant_category'];
+  if (tab === 'users') columns = ['id', 'name', 'address', 'balance', 'order_count'];
+  if (tab === 'riders') columns = ['id', 'name', 'status', 'stats'];
+  if (tab === 'orders') columns = ['id', 'user_id', 'merchant_id', 'status', 'total_price', 'final_price'];
+  if (tab === 'promotions') columns = ['id', 'title', 'type', 'status', 'budget_used', 'usage_count'];
+  
+  thead.innerHTML = `<tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr>`;
+  
+  const displayLimit = tab === 'products' ? 100 : 50;
+  tbody.innerHTML = data.slice(0, displayLimit).map(row => `
+    <tr>${columns.map(c => {
+      let val = row[c];
+      if (typeof val === 'object') val = JSON.stringify(val).slice(0, 50) + '...';
+      return `<td>${val ?? ''}</td>`;
+    }).join('')}</tr>
+  `).join('');
+}
+
+function resetData() {
+  if (!confirm('确定要重置所有数据吗？此操作不可恢复。')) return;
+  LocalStore.clearAll();
+  initializeData();
+  populateSelects();
+  refreshData();
+  alert('数据已重置');
+}
+
+function exportData() {
+  const data = {
+    merchants: LocalStore.all('merchants'),
+    users: LocalStore.all('users'),
+    riders: LocalStore.all('riders'),
+    orders: LocalStore.all('orders'),
+    config: LocalStore._read('config'),
+    a2a_messages: LocalStore._read('a2a_messages')
+  };
+  
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `takeout_data_${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Section 16: Tools List Tab
+   ════════════════════════════════════════════════════════════════ */
+const ROLE_DISPLAY = {
+  user:     { name: '用户工具', emoji: '👤' },
+  merchant: { name: '商户工具', emoji: '🏪' },
+  platform: { name: '平台工具', emoji: '🔄' },
+  rider:    { name: '骑手工具', emoji: '🏍️' },
+  operator: { name: '运营工具', emoji: '⚙️' }
+};
+
+function getToolDemoArgs(toolName) {
+  // Helper: find order by status
+  const findOrder = (status) => {
+    const orders = LocalStore.all('orders');
+    return orders.find(o => o.status === status) || orders[0];
+  };
+  const findRider = () => {
+    const riders = LocalStore.all('riders').filter(r => r.status === 'idle');
+    return riders[0] || LocalStore.all('riders')[0];
+  };
+
+  const demoMap = {
+    list_merchants:        { category: 'coffee' },
+    get_merchant_menu:     { merchant_id: 'merchant_001' },
+    search_products:       { keyword: '咖啡', category: 'coffee', sort_by: 'default' },
+    create_order:          { user_id: 'user_001', merchant_id: 'merchant_001', items: [{ name: '美式', quantity: 1 }] },
+    pay_order:             () => { const o = findOrder('CREATED'); return { order_id: o?.id || 'ORD-NOTFOUND' }; },
+    cancel_order:          () => { const o = findOrder('CREATED'); return { order_id: o?.id || 'ORD-NOTFOUND', reason: '测试取消' }; },
+    get_order:             () => { const o = LocalStore.all('orders')[0]; return { order_id: o?.id || 'ORD-NOTFOUND' }; },
+    list_orders:           { user_id: 'user_001' },
+    accept_order:          () => { const o = findOrder('PAID'); return { order_id: o?.id || 'ORD-NOTFOUND' }; },
+    reject_order:          () => { const o = findOrder('PAID'); return { order_id: o?.id || 'ORD-NOTFOUND', reason: '库存不足' }; },
+    set_merchant_subsidy:  { merchant_id: 'merchant_001', config: { enabled: true, goal: 'attract_new', max_subsidy_rate: 0.2, daily_budget: 500 } },
+    list_available_riders: {},
+    calculate_dispatch:    () => { const o = findOrder('ACCEPTED'); return { order_id: o?.id || 'ORD-NOTFOUND' }; },
+    dispatch_order:        () => { const o = findOrder('ACCEPTED'); const r = findRider(); return { order_id: o?.id || 'ORD-NOTFOUND', rider_id: r?.id || 'rider_001' }; },
+    batch_dispatch:        () => { const orders = LocalStore.all('orders').filter(o => o.status === 'ACCEPTED').slice(0, 2); return { order_ids: orders.map(o => o.id) }; },
+    start_delivery:        () => { const o = findOrder('DISPATCHED'); return { order_id: o?.id || 'ORD-NOTFOUND' }; },
+    complete_delivery:     () => { const o = findOrder('DELIVERING'); return { order_id: o?.id || 'ORD-NOTFOUND' }; },
+    get_config:            {},
+    update_config:         { goal: 'balanced', strategies: ['fair_dispatch'] },
+    set_platform_subsidy:  { config: { enabled: true, goal: 'gmv_growth', budget_per_order: 10 } },
+    get_platform_stats:    {},
+    update_order:          () => { const o = LocalStore.all('orders')[0]; return { order_id: o?.id || 'ORD-NOTFOUND', fields: { delivery_fee: 5 } }; },
+    get_subsidy_context:   { merchant_ids: ['merchant_001', 'merchant_002'] },
+    set_product_subsidies: { subsidies: [{ product_id: 'prod_001_001', merchant_id: 'merchant_001', merchant_subsidy: 3, platform_subsidy: 2, sort_score: 90, reason: 'demo test' }] },
+    create_promotion:      { title: '工具测试活动', description: '这是工具测试创建的活动', type: 'bonus_credit', rules: { total_budget: 100, per_user_amount: 5, target_users: 'all', max_uses_per_user: 1 }, reward: { type: 'credit', amount: 5 } },
+    list_promotions:       {},
+    apply_promotion:       () => { const promos = LocalStore.all('promotions').filter(p => p.status === 'active'); return { promotion_id: promos[0]?.id || 'promo_NOTFOUND', user_id: 'user_010' }; }
+  };
+
+  const entry = demoMap[toolName];
+  if (!entry) return {};
+  return typeof entry === 'function' ? entry() : entry;
+}
+
+function renderToolsList() {
+  const container = document.getElementById('tool-categories');
+  if (!container) return;
+
+  // Build tool schema lookup
+  const schemaMap = {};
+  for (const s of TOOL_SCHEMAS) {
+    schemaMap[s.function.name] = s.function;
+  }
+
+  let html = '';
+  for (const [role, tools] of Object.entries(ROLE_TOOLS)) {
+    const display = ROLE_DISPLAY[role] || { name: role, emoji: '🔧' };
+    html += `<div class="tool-category" data-role="${role}">`;
+    html += `<div class="tool-category-header">${display.emoji} ${display.name} <span class="tool-count">${tools.length}个</span></div>`;
+    html += `<div class="tool-category-grid">`;
+
+    for (const toolName of tools) {
+      const schema = schemaMap[toolName];
+      const desc = schema?.description || '';
+      const params = schema?.parameters?.properties || {};
+      const required = schema?.parameters?.required || [];
+      const paramNames = Object.keys(params);
+
+      html += `<div class="tool-card" onclick="testTool('${toolName}')" title="点击测试">`;
+      html += `<div class="tool-name">${toolName}</div>`;
+      html += `<div class="tool-desc">${desc}</div>`;
+      if (paramNames.length > 0) {
+        html += `<div class="tool-params">`;
+        for (const pn of paramNames) {
+          const isReq = required.includes(pn);
+          html += `<span class="tool-param-tag ${isReq ? 'required' : ''}">${pn}${isReq ? '*' : ''}</span>`;
+        }
+        html += `</div>`;
+      }
+      html += `</div>`;
+    }
+
+    html += `</div></div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+function testTool(toolName) {
+  const output = document.getElementById('tool-result-output');
+  const fn = TOOL_FUNCTIONS[toolName];
+  if (!fn) {
+    output.innerHTML = `<span class="tool-result-err">工具 ${toolName} 不存在</span>`;
+    return;
+  }
+
+  // Highlight active card
+  document.querySelectorAll('.tool-card.active').forEach(c => c.classList.remove('active'));
+  const cards = document.querySelectorAll('.tool-card');
+  cards.forEach(c => { if (c.querySelector('.tool-name')?.textContent === toolName) c.classList.add('active'); });
+
+  const args = getToolDemoArgs(toolName);
+
+  let result;
+  const startTime = performance.now();
+  try {
+    // Route through execTool pattern for consistent argument handling
+    const agent = { toolNames: Object.keys(TOOL_FUNCTIONS), execTool: BaseAgent.prototype.execTool };
+    agent.toolNames = Object.keys(TOOL_FUNCTIONS);
+    result = BaseAgent.prototype.execTool.call(agent, toolName, args);
+  } catch (e) {
+    result = { error: `执行异常: ${e.message}` };
+  }
+  const elapsed = (performance.now() - startTime).toFixed(1);
+
+  const isError = !!result?.error;
+  const resultJson = JSON.stringify(result, null, 2);
+
+  output.innerHTML =
+    `<span class="tool-result-header">🔧 ${toolName}</span>` +
+    `<span class="tool-result-args">参数: ${JSON.stringify(args, null, 2)}</span>` +
+    `<span style="color:var(--text-secondary);font-size:11px;">耗时: ${elapsed}ms</span>\n\n` +
+    `<span class="${isError ? 'tool-result-err' : 'tool-result-ok'}">${resultJson}</span>`;
+
+  output.scrollTop = 0;
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', initUI);
+</script>
+</body>
+</html>
